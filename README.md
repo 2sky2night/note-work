@@ -104,15 +104,15 @@ defineOptions({
 
 **模板渲染时，插槽接受到的内容:**
 
-![01](C:\Users\Admin\Desktop\fold\note\img\01.png)
+![01](https://github.com/2sky2night/note-work/blob/master/img/01.png?raw=true)
 
 **v-for指令渲染时，插槽接受到的内容：**
 
 ​	若使用了多个v-for指令，只会创建多个外层虚拟DOM，其子孩子就是对应渲染的列表。
 
-![02](C:\Users\Admin\Desktop\fold\note\img\02.png)
+![02](https://github.com/2sky2night/note-work/blob/master/img/02.png?raw=true)
 
-![03](C:\Users\Admin\Desktop\fold\note\img\03.png)
+![03](https://github.com/2sky2night/note-work/blob/master/img/03.png?raw=true)
 
 **最后**
 
@@ -197,3 +197,7 @@ defineOptions({
 **4.不使用carousel-item组件渲染轮播图项**
 
 ​	也就是carousel组件默认插槽直接传入对应原生标签，以一个标签对应一个轮播项，只需要在carousel组件中进行处理即可。
+
+**5.实现末尾两张的平滑切换**
+
+​	依旧使用老套路，在列表的前面和后面加上最后一项和第一个轮播项，此时列表为n+2个，临界值为1和n-1
