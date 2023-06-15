@@ -208,12 +208,13 @@ defineOptions({
     <div class="carousel-box" :style="{ left: `-${ currentIndex * 100 }%`, transition: `${ tsTime }s` }">
 
       <component :is="carouselList[ carouselList.length - 1 ]"></component>
-      <component v-for="(     item, index     ) in carouselList" :key="index" :is="item" />
+      <component v-for="(        item, index        ) in carouselList" :key="index" :is="item" />
       <component :is="carouselList[ 0 ]"></component>
 
     </div>
     <div v-if="showDots" class="dots-container">
-      <CarouselDot v-model="currentIndex" :index="item" v-for="         item          in carouselList.length" :key="item" />
+      <CarouselDot v-model="currentIndex" :index="item" v-for="            item             in carouselList.length"
+        :key="item" />
     </div>
     <div class="carousel-btns" v-if="showBtns">
       <div class="carousel-btn" @click="throttlePre">&lt;</div>
@@ -282,19 +283,22 @@ const carouselList: any[] = defaultsList.reduce((list: any, ele: any) => {
  * 上一张
  */
 function onHandlePre () {
-  // 恢复过渡时间
-  tsTime.value = .3;
   if (currentIndex.value == 1) {
     // 1为临界值 需要特殊处理
     // 先让其正常滑动到 0 也就是展示最后一项
     currentIndex.value--
     // 当页面更新后
     nextTick(() => {
-      // 调整过渡时间 立即跳转到正常范围中的最后一项
+      // 延迟300ms是因为轮播图动画是三秒 当动画执行完成时也就是移动到正常范围-1处了，也就是重复的最后一项。我们需要设置过渡时间为0，好让改变left时没有动画效果，然后立即移动到正常范围的最后一项。
       setTimeout(() => {
         tsTime.value = 0;
         currentIndex.value = carouselList.length
-        // 延迟300秒是因为轮播图动画是三秒 需要先移动到0项然后调整过渡时间并立即调整到正常范围的最后一项
+        // 当移动到最后一项后需要让过渡时间恢复 但是必须要用延迟器，而且必须要设置时间为动画效果的时间，否则也会被同步更新，会导致移动到正常范围的最后一项会出现动画效果。
+        nextTick(() => {
+          setTimeout(() => {
+            tsTime.value = .3
+          }, 300)
+        })
       }, 300)
 
     })
@@ -307,8 +311,6 @@ function onHandlePre () {
  * 下一张
  */
 function onHandleNext () {
-  // 恢复过渡时间
-  tsTime.value = .3;
   if (currentIndex.value === carouselList.length) {
     // 若当前是正常范围的最后一项 需要另做处理
     currentIndex.value++
@@ -317,6 +319,12 @@ function onHandleNext () {
       setTimeout(() => {
         tsTime.value = 0;
         currentIndex.value = 1;
+        // 恢复过渡时间
+        nextTick(() => {
+          setTimeout(() => {
+            tsTime.value = .3
+          }, 300)
+        })
       }, 300)
     })
   } else {
@@ -358,11 +366,14 @@ defineOptions({
   }
 
   .dots-container {
+    background-image: linear-gradient(to top, #0000002d, #00000000);
     position: absolute;
     width: 100%;
     display: flex;
     z-index: 102;
-    bottom: 10px;
+    bottom: 0px;
+    height: 35px;
+    align-items: center;
     justify-content: center;
   }
 
