@@ -263,6 +263,7 @@ const slots = defineSlots<{ default: () => any }>()
 const defaultsList = slots.default()
 // 轮播图的过渡时间
 const tsTime = ref<.3 | 0>(.3)
+console.log(defaultsList)
 // 要渲染的轮播项
 const carouselList: any[] = defaultsList.reduce((list: any, ele: any) => {
   if (ele.type.name === 'CarouselItem') {
@@ -272,6 +273,9 @@ const carouselList: any[] = defaultsList.reduce((list: any, ele: any) => {
   } else if (typeof ele.type === "symbol" && ele.type.toString() === 'Symbol(v-fgt)') {
     // 若是通过v-for指令渲染的ele.type则是一个symbol类型 则需要获取所有渲染的子内容并使用组件名是否为Carouselitme的筛选
     ele.children.filter((son: any) => son.type.name === 'CarouselItem').forEach((item: any) => list.push(item))
+    return list
+  } else {
+    // 若为其他内容则不需要渲染
     return list
   }
 }, [])
