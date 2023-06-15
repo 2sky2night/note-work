@@ -297,11 +297,11 @@ function onHandlePre () {
       setTimeout(() => {
         tsTime.value = 0;
         currentIndex.value = carouselList.length
-        // 当移动到最后一项后需要让过渡时间恢复 但是必须要用延迟器，而且必须要设置时间为动画效果的时间，否则也会被同步更新，会导致移动到正常范围的最后一项会出现动画效果。
+        // 当移动到最后一项后需要让过渡时间恢复 但是必须要用延迟器，而且必须要设置时间为动画效果的时间??(存疑)，否则也会被同步更新，会导致移动到正常范围的最后一项会出现动画效果。
         nextTick(() => {
           setTimeout(() => {
             tsTime.value = .3
-          }, 300)
+          }, 150)
         })
       }, 300)
 
@@ -327,7 +327,7 @@ function onHandleNext () {
         nextTick(() => {
           setTimeout(() => {
             tsTime.value = .3
-          }, 300)
+          }, 150)
         })
       }, 300)
     })
