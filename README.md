@@ -433,3 +433,15 @@ defineOptions({
 
 ​	defineExpose也可以传入泛型达到编译时声明暴露的成员，所以只需要定义defineExpose的类型即可实现定义组件实例的类型。在外部使用时，引入该类型即可完成对ref类型的声明。
 
+三、scss样式穿透
+
+```scss
+    ::v-deep .arco-btn{
+      pointer-events: all;
+    }
+```
+
+
+
+
+
