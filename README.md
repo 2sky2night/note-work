@@ -441,6 +441,79 @@ defineOptions({
     }
 ```
 
+四、数据库并发解决方案
+
+```ts
+const Koa = require('koa');
+const Router = require('koa-router');
+const mysql = require('mysql2/promise');
+
+const app = new Koa();
+const router = new Router();
+
+// 建立连接池
+const pool = mysql.createPool({
+  host: 'localhost',
+  user: 'root',
+  password: 'password',
+  database: 'test',
+  waitForConnections: true,
+  connectionLimit: 10,
+});
+
+// 定义一个路由处理函数，该函数会开启一个事务，并更新一条数据，同时使用乐观锁进行并发控制
+router.post('/update', async (ctx, next) => {
+  const id = ctx.request.body.id;
+  const newValue = ctx.request.body.newValue;
+
+  // 开启事务
+  const conn = await pool.getConnection();
+  await conn.beginTransaction();
+
+  try {
+    // 查询当前数据的版本号和值
+    const [rows, _] = await conn.query('SELECT value, version FROM mytable WHERE id = ? FOR UPDATE', [id]);
+
+    if (!rows.length) {
+      throw new Error(`Data with id=${id} does not exist`);
+    }
+
+    // 检查版本号是否匹配，若不匹配则表示数据已被修改过
+    const { value, version } = rows[0];
+    if (version !== ctx.request.body.version) {
+      throw new Error(`Data with id=${id} has been modified by others`);
+    }
+
+    // 更新数据并增加版本号
+    await conn.query('UPDATE mytable SET value = ?, version = version + 1 WHERE id = ?', [newValue, id]);
+
+    // 提交事务
+    await conn.commit();
+
+    ctx.body = {
+      success: true,
+      message: `Data with id=${id} has been updated successfully`,
+    };
+  } catch (err) {
+    // 回滚事务
+    await conn.rollback();
+
+    ctx.status = 500;
+    ctx.body = {
+      success: false,
+      message: err.message,
+    };
+  } finally {
+    // 释放数据库连接
+    conn.release();
+  }
+});
+
+app.use(router.routes()).use(router.allowedMethods());
+app.listen(3000);
+
+```
+
 
 
 
