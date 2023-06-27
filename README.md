@@ -514,7 +514,601 @@ app.listen(3000);
 
 ```
 
+### 五、vue项目使用i18n插件
 
+navigator.language这个BOM API可以获取当前浏览器的语言
 
+#### 1.配置i18n插件
 
+​	需要先安装vue-i18n插件，创建locale文件夹，创建index文件，引入后配置i18n插件，同时需要准备各个国家的翻译文案。导出i18n对象后，可以直接使用app.use注册插件，就可以在模板中使用该插件提供的api实现多语言文本替换了。
+
+```ts
+import { createI18n } from 'vue-i18n';
+// 提前准备好的各个国家的翻译文案
+import CN from './CN';
+import US from './US';
+import BR from './BR';
+import ID from './ID';
+import JP from './JP';
+import RU from './RU';
+import TH from './TH';
+import VN from './VN';
+import NG from './NG';
+
+const i18n = createI18n({ 
+    // 当前激活的国家文本 （value必须是messages配置项中的某个key）
+    locale: 'CN', 
+    // 失败激活的国家文本（value必须是messages配置项中的某个key）
+    fallbackLocale: 'US',
+    allowComposition: true,
+    // 配置各个国家的文本
+    messages: {
+        CN,
+        US,
+        BR,
+        ID,
+        JP,
+        RU,
+        TH,
+        VN,
+        NG
+    }
+});
+  
+export default i18n;
+```
+
+#### 2.配置某个国家的文案
+
+​	形如这种对象形式的来配置各个文本
+
+// CN.ts
+
+```ts
+import layout from './CN/layout'
+export default {
+  layout,
+  message: {
+    hello:'你好'
+  }
+}
+```
+
+// 模块化举例 layout.ts
+
+```ts
+export default {
+  header: {
+    signIn: '登录',
+    signUp: '注册',
+    home: '首页',
+    game:'游戏'
+  },
+}
+```
+
+#### 3.在模板中使用
+
+​	通过app.use安装好了该插件就可以直接在模板中使用其提供的$t方法，来通过2中配置的对象路径来读取对应的文案。
+
+```vue
+<template>
+  <div class="sign-container">
+    <div class="mr-10 sign-in-btn btn">{{ $t('layout.header.signIn') }}</div>
+    <div class="sign-up-btn btn">{{ $t('layout.header.signUp') }}</div>
+  </div>
+</template>
+```
+
+#### 4.在ts中使用
+
+ 	引入创建的i18n实例即可使用提供的api，i18n.global.t()，读取对象路径获取对应的值。
+
+ ```ts
+<script lang='ts' setup>
+import NavBtn from '@/components/btn/NavBtn.vue';
+import i18n from '@/locale' // 引入i8n实例
+
+const list = [
+  { icon: 'icon-home', title: i18n.global.t('layout.header.home'), path: '/' },
+  { icon: 'icon-live-broadcast', title: i18n.global.t('layout.header.game'), path: '/game' },
+]
+</script>
+ ```
+
+#### 5.切换当前语言设置
+
+​	该钩子可以获取到i18n实例，i18n.locale.value即可设置语言，但是必须是实例化i18n时messages配置项中有的key才能生效。
+
+```ts
+import { useI18n } from 'vue-i18n'
+// i18n插件
+const i18n = useI18n()
+function setLanguage (value: LOCALE_VALUE_TYPE) {
+  i18n.locale.value = value
+}
+```
+
+​	所有模板内容调用了$t函数都会重新解析模板生成对应语言的dom文本
+
+![01](https://github.com/2sky2night/note-work/blob/master/img/05.png?raw=true)
+
+​	**但是通过ts调用t函数是不会因为语言更新而重新调用 这个需要特别注意（也就是4的例子）。**，这种方式生成的内容都是死内容，需要自己手动监听语言的变化，重新调用t函数生成对应语言文本。
+
+![01](https://github.com/2sky2night/note-work/blob/master/img/04.png?raw=true)
+
+#### 6.多语言路由表渲染导航菜单处理
+
+​	最开始我是直接在路由上直接调用t函数根据语言模式生成对应文本，这样生成的路由表是文本内容是死的，有两种解决方案
+
+###### 1.getter函数（代码量多一些）
+
+​	所以可以配置一个getter函数，getter函数调用后返回当前语言的路由表。
+
+##### routes.ts
+
+```ts
+import type { RouteRecordRaw } from 'vue-router';
+import i18n from '@/locale';
+
+export const initRoutes: RouteRecordRaw[] = [
+  {
+    path: '/',
+    name: 'home',
+    component: () => import('@/views/home/index.vue'),
+    meta: {
+      title: i18n.global.t('menu.home'),
+      icon: 'icon-folder',
+      level: 1
+    }
+  },
+  {
+    path: '/sports',
+    name: 'sports',
+    component: () => import('@/views/sports/index.vue'),
+    meta: {
+      title: i18n.global.t('menu.sports'),
+      icon: 'icon-at',
+      level: 1
+    }
+  },
+  {
+    path: '/game',
+    name: 'game',
+    component: () => import('@/views/game/index.vue'),
+    meta: {
+      title: i18n.global.t('menu.game'),
+      icon: 'icon-code',
+      level: 1
+    }
+  },
+  {
+    path: '/test',
+    name: 'test',
+    component: () => import('@/views/test/index.vue'),
+    meta: {
+      title: 'test',
+      icon: 'icon-folder',
+      level: 1
+    },
+    children: [
+      {
+        path: '/test/test-son-01',
+        name: 'test-son-01',
+        component: () => import('@/views/test/children/test-son-01/index.vue'),
+        meta: {
+          title: 'test-son-01',
+          icon: 'icon-folder',
+          level: 2
+        },
+        children: [
+          {
+            path: '/test/test-son-01/test-son-01-son-01',
+            name: 'test-son-01-son-01',
+            component: () => import('@/views/test/children/test-son-01/children/test-son-01-son-01/index.vue'),
+            meta: {
+              title: 'test-son-01-son-01',
+              icon: 'icon-folder',
+              level: 3
+            },
+          },
+          {
+            path: '/test/test-son-01/test-son-01-son-02',
+            name: 'test-son-01-son-02',
+            component: () => import('@/views/test/children/test-son-01/children/test-son-01-son-02/index.vue'),
+            meta: {
+              title: 'test-son-01-son-02',
+              icon: 'icon-folder',
+              level: 3
+            },
+          },
+        ]
+      },
+      {
+        path: '/test/test-son-02',
+        name: 'test-son-02',
+        component: () => import('@/views/test/children/test-son-02/index.vue'),
+        meta: {
+          title: 'test-son-02',
+          icon: 'icon-folder',
+          level: 2
+        },
+        children: [
+          {
+            
+            path: '/test/test-son-02/test-son-02-son-01',
+            name: 'test-son-02-son-01',
+            component: () => import('@/views/test/children/test-son-02/children/test-son-02-son-01/index.vue'),
+            meta: {
+              title: 'test-son-02-son-01',
+              icon: 'icon-folder',
+              level: 3
+            },
+          },
+          {
+            path: '/test/test-son-02/test-son-02-son-02',
+            name: 'test-son-02-son-02',
+            component: () => import('@/views/test/children/test-son-02/children/test-son-02-son-02/index.vue'),
+            meta: {
+              title: 'test-son-02-son-02',
+              icon: 'icon-folder',
+              level: 3
+            },
+          },
+        ]
+      }
+    ]
+  },
+  {
+    path: '/blog',
+    name: 'blog',
+    component: () => import('@/views/blog/index.vue'),
+    meta: {
+      title: i18n.global.t('menu.blog'),
+      icon: 'icon-launch',
+      level: 1
+    }
+  },
+]
+
+/**
+ * 获取路由表
+ * @returns 
+ */
+export const getterInitRoutes = () => {
+  return [
+    {
+      path: '/',
+      name: 'home',
+      component: () => import('@/views/home/index.vue'),
+      meta: {
+        title: i18n.global.t('menu.home'),
+        icon: 'icon-folder',
+        level: 1
+      }
+    },
+    {
+      path: '/sports',
+      name: 'sports',
+      component: () => import('@/views/sports/index.vue'),
+      meta: {
+        title: i18n.global.t('menu.sports'),
+        icon: 'icon-at',
+        level: 1
+      }
+    },
+    {
+      path: '/game',
+      name: 'game',
+      component: () => import('@/views/game/index.vue'),
+      meta: {
+        title: i18n.global.t('menu.game'),
+        icon: 'icon-code',
+        level: 1
+      }
+    },
+    {
+      path: '/test',
+      name: 'test',
+      component: () => import('@/views/test/index.vue'),
+      meta: {
+        title: 'test',
+        icon: 'icon-folder',
+        level: 1
+      },
+      children: [
+        {
+          path: '/test/test-son-01',
+          name: 'test-son-01',
+          component: () => import('@/views/test/children/test-son-01/index.vue'),
+          meta: {
+            title: 'test-son-01',
+            icon: 'icon-folder',
+            level: 2
+          },
+          children: [
+            {
+              path: '/test/test-son-01/test-son-01-son-01',
+              name: 'test-son-01-son-01',
+              component: () => import('@/views/test/children/test-son-01/children/test-son-01-son-01/index.vue'),
+              meta: {
+                title: 'test-son-01-son-01',
+                icon: 'icon-folder',
+                level: 3
+              },
+            },
+            {
+              path: '/test/test-son-01/test-son-01-son-02',
+              name: 'test-son-01-son-02',
+              component: () => import('@/views/test/children/test-son-01/children/test-son-01-son-02/index.vue'),
+              meta: {
+                title: 'test-son-01-son-02',
+                icon: 'icon-folder',
+                level: 3
+              },
+            },
+          ]
+        },
+        {
+          path: '/test/test-son-02',
+          name: 'test-son-02',
+          component: () => import('@/views/test/children/test-son-02/index.vue'),
+          meta: {
+            title: 'test-son-02',
+            icon: 'icon-folder',
+            level: 2
+          },
+          children: [
+            {
+              
+              path: '/test/test-son-02/test-son-02-son-01',
+              name: 'test-son-02-son-01',
+              component: () => import('@/views/test/children/test-son-02/children/test-son-02-son-01/index.vue'),
+              meta: {
+                title: 'test-son-02-son-01',
+                icon: 'icon-folder',
+                level: 3
+              },
+            },
+            {
+              path: '/test/test-son-02/test-son-02-son-02',
+              name: 'test-son-02-son-02',
+              component: () => import('@/views/test/children/test-son-02/children/test-son-02-son-02/index.vue'),
+              meta: {
+                title: 'test-son-02-son-02',
+                icon: 'icon-folder',
+                level: 3
+              },
+            },
+          ]
+        }
+      ]
+    },
+    {
+      path: '/blog',
+      name: 'blog',
+      component: () => import('@/views/blog/index.vue'),
+      meta: {
+        title: i18n.global.t('menu.blog'),
+        icon: 'icon-launch',
+        level: 1
+      }
+    },
+  ]
+}
+```
+
+##### 使用
+
+```vue
+<template>
+  <div class="navigations-container">
+    <a-menu :selected-keys="[ $route.path ]">
+      <NavigateItems :routes="routesList" />
+    </a-menu>
+  </div>
+</template>
+
+<script lang='ts' setup>
+// 路由表
+import { getterInitRoutes } from '@/router/routes';
+// 组件
+import NavigateItems from './NavigateItems.vue';
+// hooks
+import { useRoute } from 'vue-router';
+import useSettingStore from '@/store/setting';
+import { watch,reactive } from 'vue';
+import { storeToRefs } from 'pinia';
+// types
+import type { RouteRecordRaw } from 'vue-router';
+
+// 设置仓库
+const settingStore = useSettingStore()
+// 当前语言
+const { language } = storeToRefs(settingStore)
+// 路由
+const $route = useRoute()
+// 路由表
+const routesList: RouteRecordRaw[] = reactive([])
+
+// 语言变化时 需要重新根据语言来获取最新的路由表
+watch(language, () => {
+  routesList.length = 0
+  getterInitRoutes().forEach(ele => {
+    routesList.push(ele)
+  })
+},{immediate:true})
+
+</script>
+
+<style scoped lang='scss'>
+.navigations-container {
+  flex-grow: 1;
+}
+</style>
+```
+
+2.使用computed函数
+
+​	利用i18n.global.t函数在语言切换时会重新调用一次的特性，可以使用computed函数，传入getter函数，getter函数直接返回路由表，这样就能做到语言切换时重新调用getter函数，相当于底层就是1的实现，但是简化了监听的流程，让vue监听到t函数执行直接调用getter函数获取最新的路由表。
+
+定义
+
+```ts
+/**
+ * 获取路由表
+ * @returns 
+ */
+export const getterInitRoutes = computed(() => {
+  return [
+    {
+      path: '/',
+      name: 'home',
+      component: () => import('@/views/home/index.vue'),
+      meta: {
+        title: i18n.global.t('menu.home'),
+        icon: 'icon-folder',
+        level: 1
+      }
+    },
+    {
+      path: '/sports',
+      name: 'sports',
+      component: () => import('@/views/sports/index.vue'),
+      meta: {
+        title: i18n.global.t('menu.sports'),
+        icon: 'icon-at',
+        level: 1
+      }
+    },
+    {
+      path: '/game',
+      name: 'game',
+      component: () => import('@/views/game/index.vue'),
+      meta: {
+        title: i18n.global.t('menu.game'),
+        icon: 'icon-code',
+        level: 1
+      }
+    },
+    {
+      path: '/test',
+      name: 'test',
+      component: () => import('@/views/test/index.vue'),
+      meta: {
+        title: 'test',
+        icon: 'icon-folder',
+        level: 1
+      },
+      children: [
+        {
+          path: '/test/test-son-01',
+          name: 'test-son-01',
+          component: () => import('@/views/test/children/test-son-01/index.vue'),
+          meta: {
+            title: 'test-son-01',
+            icon: 'icon-folder',
+            level: 2
+          },
+          children: [
+            {
+              path: '/test/test-son-01/test-son-01-son-01',
+              name: 'test-son-01-son-01',
+              component: () => import('@/views/test/children/test-son-01/children/test-son-01-son-01/index.vue'),
+              meta: {
+                title: 'test-son-01-son-01',
+                icon: 'icon-folder',
+                level: 3
+              },
+            },
+            {
+              path: '/test/test-son-01/test-son-01-son-02',
+              name: 'test-son-01-son-02',
+              component: () => import('@/views/test/children/test-son-01/children/test-son-01-son-02/index.vue'),
+              meta: {
+                title: 'test-son-01-son-02',
+                icon: 'icon-folder',
+                level: 3
+              },
+            },
+          ]
+        },
+        {
+          path: '/test/test-son-02',
+          name: 'test-son-02',
+          component: () => import('@/views/test/children/test-son-02/index.vue'),
+          meta: {
+            title: 'test-son-02',
+            icon: 'icon-folder',
+            level: 2
+          },
+          children: [
+            {
+              
+              path: '/test/test-son-02/test-son-02-son-01',
+              name: 'test-son-02-son-01',
+              component: () => import('@/views/test/children/test-son-02/children/test-son-02-son-01/index.vue'),
+              meta: {
+                title: 'test-son-02-son-01',
+                icon: 'icon-folder',
+                level: 3
+              },
+            },
+            {
+              path: '/test/test-son-02/test-son-02-son-02',
+              name: 'test-son-02-son-02',
+              component: () => import('@/views/test/children/test-son-02/children/test-son-02-son-02/index.vue'),
+              meta: {
+                title: 'test-son-02-son-02',
+                icon: 'icon-folder',
+                level: 3
+              },
+            },
+          ]
+        }
+      ]
+    },
+    {
+      path: '/blog',
+      name: 'blog',
+      component: () => import('@/views/blog/index.vue'),
+      meta: {
+        title: i18n.global.t('menu.blog'),
+        icon: 'icon-launch',
+        level: 1
+      }
+    },
+  ]
+})
+```
+
+使用
+
+```ts
+<template>
+  <div class="navigations-container">
+    <a-menu :selected-keys="[ $route.path ]">
+      <NavigateItems :routes="getterInitRoutes" />
+    </a-menu>
+  </div>
+</template>
+
+<script lang='ts' setup>
+// 路由表
+import { getterInitRoutes } from '@/router/routes';
+// 组件
+import NavigateItems from './NavigateItems.vue';
+// hooks
+import { useRoute } from 'vue-router';
+// 路由
+const $route = useRoute()
+
+</script>
+
+<style scoped lang='scss'>
+.navigations-container {
+  flex-grow: 1;
+}
+</style>
+```
 
