@@ -1112,3 +1112,105 @@ const $route = useRoute()
 </style>
 ```
 
+#### 7.渲染动态内容
+
+​	例如要渲染 确定删除xx吗？的国际化
+
+定义：
+
+```ts
+en:{
+    deleteTip:'Are you sure to delete {username}'
+},
+cn:{
+    deleteTip:'你确定要删除 {username} 吗'
+}
+```
+
+使用
+
+```ts
+$t('deleteTip',{username:'张三'})
+```
+
+8.多语言面包屑
+
+```ts
+<template>
+  <div class="breadcrumb-container">
+    <a-breadcrumb>
+      <a-breadcrumb-item @click="() => onHandleClick(item.path)" v-for="item in list" :key="item.path">
+        {{ item.title }}
+      </a-breadcrumb-item>
+    </a-breadcrumb>
+  </div>
+</template>
+
+<script lang='ts' setup>
+import { useRoute, useRouter } from 'vue-router';
+import { computed } from 'vue'
+import type { RouteRecordRaw } from 'vue-router';
+import { getterInitRoutes } from '@/router/routes';
+
+const router = useRouter()
+const route = useRoute()
+const list = computed(() => {
+  // 当前激活的路由
+  const nowRoutes = route.matched
+  // 遍历当前激活的路由表 获取对应的title
+  return nowRoutes.map(ele => {
+    return {
+      path: ele.path,
+      title:getRouteTitle(ele.path,getterInitRoutes.value)
+    }
+  })
+})
+
+// 根据当前路由的path获取对应的title
+function getRouteTitle (path: string, routes: RouteRecordRaw[]):string {
+  let title = ''
+  // 遍历当前层级的路由 获取对应的title
+  if(routes.some(ele => {
+    if (ele.path === path) {
+      if (ele.meta) {
+        title = ele.meta.title
+      } else {
+        title = ele.path
+      }
+      return true
+    }
+  })) {
+    // 若找到了则直接返回对应title
+    return title
+  } else {
+
+    // 若没找到就遍历当前层的每一级路由，递归调用对应子路由
+    for (let i = 0; i < routes.length; i++){
+      // 若有子孩子就递归调用 没有就跳过调用递归函数
+      if (routes[ i ].children) {
+        const res = getRouteTitle(path, routes[ i ].children as RouteRecordRaw[])
+        // 若找到了 并且不为not found（因为第一次调用可能未找到则返回值为not found，但后续子路由还没开始找呢） 没找到则直接跳过，遍历下一个路由
+        if (res&&res!=='not found') {
+          return res
+        }
+      }
+    }
+
+    // 兜底的 若遍历一直没找到就是not found
+    return 'not found'
+  }
+}
+
+const onHandleClick = (path: string) => {
+  router.push(path)
+}
+
+defineOptions({
+  name: 'Breadcrumbs'
+})
+</script>
+
+```
+
+
+
