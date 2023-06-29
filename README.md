@@ -1212,5 +1212,127 @@ defineOptions({
 
 ```
 
+六、模态框
+
+```vue
+<template>
+  <Teleport to="body">
+    <Transition name="modal">
+      <div class="modal-container" v-if="isShowModal" @click="handleCloseModal">
+        <Transition name="content" appear>
+          <div @click.stop="" class="content" v-if="isShow">
+            <slot name="default"></slot>
+          </div>
+        </Transition>
+      </div>
+    </Transition>
+  </Teleport>
+</template>
+
+<script lang='ts' setup>
+import { ref, watch, nextTick } from 'vue';
+
+const props = defineProps<{
+  /**
+   * 模态框是否显示
+   */
+  modelValue: boolean
+}>()
+const emit = defineEmits<{
+  /**
+   * 
+   */
+  'update:modelValue': [ value: boolean ]
+  /**
+   * 模态框关闭的事件
+   */
+  'close': []
+}>()
+defineSlots<{
+  default: () => any
+}>()
+
+// 是否显示主要内容
+const isShow = ref(true)
+const isShowModal = ref(false)
+// 当前是否还在执行关闭的动画效果？
+let time: null | number = null
+
+/**
+ * 点击遮罩层的回调
+ */
+const handleCloseModal = () => {
+  isShow.value = false;
+  // 动画效果执行完毕时 销毁模态框
+  nextTick(() => {
+    time=setTimeout(() => {
+      isShowModal.value = false
+      emit('update:modelValue', false)
+      emit('close')
+      time=null
+    }, 300)
+  })
+}
+
+// 保持一致
+watch(() => props.modelValue, (v) => {
+  if (time) {
+    // 非常重要
+    // 若当前还有在挂起的延时器 则关闭延时器 避免数据源混乱
+    clearTimeout(time)
+  }
+  if (!v) {
+    // 关闭模态框
+    handleCloseModal()
+  } else {
+    isShowModal.value = v
+    isShow.value = v
+  }
+}, { immediate: true })
+defineOptions({ name: 'Modal' })
+</script>
+
+<style scoped lang='scss'>
+.modal-container {
+  position: fixed;
+  z-index: 999;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background-color: var(--color-mask-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .content {
+    background-color: var(--color-bg-1);
+    min-height: 100px;
+    min-width: 100px;
+  }
+
+  .content-enter-active {
+    animation: contentMove .3s 1 ease-in-out;
+  }
+
+  .content-leave-active {
+    animation: contentMove .3s 1 ease-in-out reverse;
+  }
+
+  @keyframes contentMove {
+    from {
+      opacity: 0;
+      transform: scale(.7);
+    }
+
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+</style>
+```
+
 
 
