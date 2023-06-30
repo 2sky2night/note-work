@@ -1343,3 +1343,48 @@ https://juejin.cn/post/7151950058501373989 vue+tsx
 https://blog.csdn.net/weixin_43972992/article/details/124755426 全局注册的组件配置ts类型支持
 
 [全局组件类型声明的最佳实践 (Vue3+TS+Volar) - 掘金 (juejin.cn)](https://juejin.cn/post/7066730414626308103)
+
+七、封装鉴权按钮组件
+
+​	页面中有很多按钮都需要用户登录才能使用的，如果给每个按钮的点击事件添加判断登录的逻辑多少有点繁琐，所以就想自己封装一个鉴权组件（最开始想用自定义指令实现的，奈何自定义指令没办法捕获点击事件）。
+
+​	原理：鉴权按钮组件其实没有按钮，通过slots传入对应的按钮组件，外层一个div容器，当点击插槽中的内容时，事件触发会从html根元素开始捕获，会经过外层的div，最后到达插槽里面的元素，我们可以通过事件捕获机制来拦截到此次点击事件，并执行对应鉴权逻辑，最后（最关键的是）通过stopImmediatePropagation，停止事件捕获，也就是说停止浏览器向里面寻找事件触发的元素，和停止事件冒泡一个逻辑，只是方向不一样，冒泡是从里到外，捕获是从外到内。
+
+```vue
+<template>
+  <div @click.capture="(e)=>onHandleClick(e)" class="auth-btn-container">
+    <slot name="default"></slot>
+  </div>
+</template>
+
+<script lang='ts' setup>
+// hooks
+import useUserStore from '@/store/user';
+import { useMessage } from 'naive-ui';
+// types
+import type { VNode } from 'vue';
+// configs
+import tips from '@/config/tips';
+
+const message = useMessage()
+const userStore = useUserStore()
+
+/**
+ * 点击的该容器的回调 在捕获时触发
+ */
+const onHandleClick =  (e:Event) => {
+  if (userStore.isLogin) {
+    message.success('用户登录了')
+  } else {
+    message.warning('未登录')
+    // 停止事件捕获 阻止继续事件捕获
+    e.stopImmediatePropagation()
+  }
+}
+
+defineSlots<{
+  default:()=>VNode[]
+}>()
+</script>
+```
+
