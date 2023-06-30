@@ -1336,3 +1336,10 @@ defineOptions({ name: 'Modal' })
 
 
 
+https://juejin.cn/post/7151950058501373989 vue+tsx
+
+
+
+https://blog.csdn.net/weixin_43972992/article/details/124755426 全局注册的组件配置ts类型支持
+
+[全局组件类型声明的最佳实践 (Vue3+TS+Volar) - 掘金 (juejin.cn)](https://juejin.cn/post/7066730414626308103)
