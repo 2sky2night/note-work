@@ -1,4 +1,4 @@
-一、封装轮播图Carousel组件
+### 一、封装轮播图Carousel组件
 
 ​	一般看到的Carousel组件都为一个Carousel父组件包裹n个carousel-item组件。
 
@@ -425,7 +425,7 @@ defineOptions({
 </style>
 ```
 
-二、声明ref获取到的组件实例类型
+### 二、声明ref获取到的组件实例类型
 
 ​	有时候自己定义的组件，在使用时，通过ref想要获取到组件实例读取组件暴露出来的属性，但是想要定义组件实例的类型却不知道无从下手，就会导致ts推论错误。
 
@@ -433,7 +433,7 @@ defineOptions({
 
 ​	defineExpose也可以传入泛型达到编译时声明暴露的成员，所以只需要定义defineExpose的类型即可实现定义组件实例的类型。在外部使用时，引入该类型即可完成对ref类型的声明。
 
-三、scss样式穿透
+### 三、scss样式穿透
 
 ```scss
     ::v-deep .arco-btn{
@@ -441,7 +441,7 @@ defineOptions({
     }
 ```
 
-四、数据库并发解决方案
+### 四、数据库并发解决方案
 
 ```ts
 const Koa = require('koa');
@@ -1334,14 +1334,13 @@ defineOptions({ name: 'Modal' })
 </style>
 ```
 
-七.vue+jsx实践
 
 https://juejin.cn/post/7151950058501373989 vue+tsx
 
 八全局注册的组件配置ts类型支持
+### 七、全局组件的ts类型提示
 
 https://blog.csdn.net/weixin_43972992/article/details/124755426 
-
 [全局组件类型声明的最佳实践 (Vue3+TS+Volar) - 掘金 (juejin.cn)](https://juejin.cn/post/7066730414626308103)
 
 九、封装鉴权按钮组件
