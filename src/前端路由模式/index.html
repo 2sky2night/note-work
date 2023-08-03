@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    .navigation {
+      display: flex;
+    }
+
+    .navigate {
+      margin-right: 10px;
+      cursor: pointer;
+    }
+
+    .navigate:hover {
+      color: red;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="navigation">
+    <div class="navigate" data-path="/home">go home</div>
+    <div class="navigate" data-path="/user">go user</div>
+  </div>
+
+  <div class="router-view"></div>
+  <script>
+    // history模式
+    // 路由入口
+    const routeViewDOM = document.querySelector('.router-view')
+    const navigationDOM = document.querySelector('.navigation')
+    // 路由表
+    const routes = [
+      {
+        path: '/home',
+        template: '<h1>this is home</h1>'
+      },
+      {
+        path: '/user',
+        template: '<div>this is user</div>'
+      }
+    ]
+
+    // 点击某个路由的回调
+    navigationDOM.addEventListener('click', (e) => {
+      if (e.target.className === 'navigate') {
+        const state = { name: e.target.dataset.path }
+        // 不会触发 onpopstate的监听
+        history.pushState(state, "", e.target.dataset.path.slice(1))
+        handlePathChange()
+      }
+    })
+
+    // 路由切换后的回调
+    const handlePathChange = () => {
+      if (location.pathname === '' || location.pathname === '/') {
+        routeViewDOM.innerHTML = routes[ 0 ].template
+      } else {
+        if (!routes.some(ele => {
+          if (ele.path === location.pathname) {
+            routeViewDOM.innerHTML = ele.template
+            return true
+          }
+        })) {
+          routeViewDOM.innerHTML = '404 not found'
+        }
+      }
+    }
+
+    // 监听pathname变化
+    window.onpopstate = (e) => {
+      // e为一个事件对象 里面包含了弹出的历史记录的state数据，state就是pushState的第一个参数
+      // 可以用来作为路由传参？
+      console.log(e);
+      handlePathChange()
+    }
+
+    // 初始化加载时 渲染路由入口
+    window.onload = handlePathChange
+
+  </script>
+  <!-- <script>
+    // hash模式
+    // 路由入口
+    const routeViewDOM = document.querySelector('.router-view')
+    const navigationDOM = document.querySelector('.navigation')
+    // 路由表
+    const routes = [
+      {
+        path: '/home',
+        template: '<h1>this is home</h1>'
+      },
+      {
+        path: '/user',
+        template: '<div>this is user</div>'
+      }
+    ]
+
+    // 初始化加载时通过路由表来初始化路由入口
+    window.onload = () => {
+      const path = location.hash.split('#')[ 1 ]
+      getPathRenderView(path)
+    }
+
+    // hash值变化时
+    window.onhashchange = (ev) => {
+      const path = ev.newURL.split('#')[ 1 ]
+      getPathRenderView(path)
+    }
+
+    // 给路由路径 遍历路由表渲染一级路由
+    const getPathRenderView = (path) => {
+      if (path === '/' || path === '') {
+        // 渲染默认路由
+        routeViewDOM.innerHTML = routes[ 0 ].template
+      } else {
+        // 渲染非默认路由
+        if (!routes.some(ele => {
+          if (ele.path === path) {
+            routeViewDOM.innerHTML = ele.template
+            return true
+          }
+        })) {
+          // not-found
+          routeViewDOM.innerHTML = 'not-found'
+        }
+      }
+    }
+
+    // 点击某个路由的回调
+    navigationDOM.addEventListener('click', (e) => {
+      if (e.target.className === 'navigate') {
+        location.href = '#' + e.target.dataset.path
+      }
+    })
+
+
+  </script> -->
+</body>
+
+</html>

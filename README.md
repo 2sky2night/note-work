@@ -1334,17 +1334,17 @@ defineOptions({ name: 'Modal' })
 </style>
 ```
 
-
+七.vue+jsx实践
 
 https://juejin.cn/post/7151950058501373989 vue+tsx
 
+八全局注册的组件配置ts类型支持
 
-
-https://blog.csdn.net/weixin_43972992/article/details/124755426 全局注册的组件配置ts类型支持
+https://blog.csdn.net/weixin_43972992/article/details/124755426 
 
 [全局组件类型声明的最佳实践 (Vue3+TS+Volar) - 掘金 (juejin.cn)](https://juejin.cn/post/7066730414626308103)
 
-七、封装鉴权按钮组件
+九、封装鉴权按钮组件
 
 ​	页面中有很多按钮都需要用户登录才能使用的，如果给每个按钮的点击事件添加判断登录的逻辑多少有点繁琐，所以就想自己封装一个鉴权组件（最开始想用自定义指令实现的，奈何自定义指令没办法捕获点击事件）。
 
@@ -1387,4 +1387,102 @@ defineSlots<{
 }>()
 </script>
 ```
+
+
+
+十、路由模式
+
+浏览器的路由模式有两种:history和hash模式，他们的表现形式都是在url呈现的，只不过hash模式以hash值表述，history模式以模拟路径表示，他们两个相同点都是值发生变化时都不会导致http请求，比较大的不同点是第一次加载页面时，会发生一次网络请求加载html资源，但是hash值不会被后端接受到，而history模式下对应的模拟路径也会被当成请求的路径，从而会导致不能正确的加载html资源
+
+一个URL信息可以从location对象可以看出，如`(http://127.0.0.1:3001/sadasd?op=8#/dsad)`会被解析成:
+
+host:'127.0.0.1:3001' 主机名
+
+pathname:'/sadasd'
+
+port:'3001'
+
+hash:'#/dasd'
+
+protocol:'http:',
+
+search:'?op=8'
+
+....
+
+hash模式
+
+​	hash模式的原理就是通过监听，url上的hash值变化，根据当前hash值与路由表进行匹配，从而渲染对应内容。如何监听hash值的变化呢？使用onhashchange即可监听浏览器hash值变化了，hash值变化从之执行相关操作即可。
+
+```js
+	// 路由表
+    const routes = [
+      {
+        path: '/home',
+        template: '<h1>this is home</h1>'
+      },
+      {
+        path: '/user',
+        template: '<div>this is user</div>'
+      }
+    ]
+        // hash值变化时
+    window.onhashchange = (ev) => {
+      // ev为一个事件对象，包含了新旧的url值等等
+      const path = ev.newURL.split('#')[ 1 ]
+      // 解析出路由路径后，进入路由表进行匹配，渲染对应内容
+      routes.some(ele=>{
+          if(ele.path===path){
+              body.innerHTML=ele.template
+              return true
+          }
+      })
+    }
+```
+
+history模式
+
+​	history模式主要是使用pushState、replaceState这两个API实现url上pathname的变化，而popState做为window上的事件监听，可以监听浏览器前进或后退，从而执行渲染对应内容。
+
+API
+
+​	history.pushState(state,title,path)
+
+​	第一个参数可以作为路由传参的方式来保存数据？
+
+​	第二个是浏览器标题，一般传入空串即可，大部分浏览器会忽略该参数
+
+​	第三个是path路径，调用后url的pathname就会变成对应的path值。
+
+```ts
+ history.pushState({}, "", "home")
+```
+
+调用后url上的pathname就会变成第三个参数的值，然后就可以根据pathname来匹配路由，从而渲染对应路由视图，**注意调用pushState或replaceState都不会触发popstate事件。**
+
+事件popState
+
+​	popState会在浏览器前进后退时会触发，函数可以接受到一个事件对象，里面有对应pushState时传入的state，事件触发后可以根据当前pathname匹配路由表来渲染对应路由
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
