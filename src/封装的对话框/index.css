@@ -1,0 +1,12 @@
+.dialog-mask{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #00000085;
+  position: fixed;
+  bottom: 0;
+  top:0;
+  right: 0;
+  left: 0;
+  overflow: hidden;
+}
