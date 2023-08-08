@@ -1,7 +1,7 @@
 <template>
   <div class="container" ref="containerDOM">
     <ul class="list">
-      <li v-for="(  item, index  ) in list">
+      <li v-for="(item, index) in list">
         <span>{{ index + 1 }}</span>
         <img :src="item">
       </li>
@@ -12,7 +12,7 @@
 
 <script lang='ts' setup>
 import { onMounted, reactive, ref } from 'vue'
-import WaterfullResovle from './waterfull';
+import WaterfallResovle from './waterfall';
 const temp = [ 'src/imgs/01.png',
   'src/imgs/03.png',
   'src/imgs/02.png',
@@ -36,31 +36,36 @@ const list = reactive<string[]>([ ...temp ])
 const containerDOM = ref<HTMLDivElement | null>(null)
 const isLoading = ref(false)
 
-function getData () {
+async function getData () {
   if (isLoading.value) {
     return
   }
   isLoading.value = true
-  setTimeout(() => {
-    temp.forEach(ele => {
-      list.push(ele)
-    })
-    isLoading.value = false
-  }, 1000)
+  await new Promise<void>(r => {
+    setTimeout(() => {
+      temp.forEach(ele => {
+        list.push(ele)
+      })
+      isLoading.value = false
+      r()
+    }, 1000)
+
+  })
 }
 
 onMounted(() => {
   if (containerDOM.value) {
     const target = containerDOM.value as HTMLDivElement;
 
-    new WaterfullResovle({
+    const ins = new WaterfallResovle({
       el: target.children[ 0 ] as HTMLUListElement,
       column: 3,
       gap: 10
     })
-    containerDOM.value.addEventListener('scroll', () => {
+    containerDOM.value.addEventListener('scroll', async () => {
       if (target.clientHeight + target.scrollTop >= target.scrollHeight) {
-        getData()
+        await getData()
+        ins.renderOk()
       }
     })
   }

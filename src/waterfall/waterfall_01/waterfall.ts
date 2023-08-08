@@ -38,6 +38,10 @@ export default class WaterfullResovle {
    * 每一列的高度
    */
   columnWidth: number;
+  /**
+   * 当前计算到第几个子项了?
+   */
+  currentIndex: number;
   constructor (options: WaterFullOptions) {
     this.gap = options.gap;
     this.column = options.column;
@@ -49,22 +53,14 @@ export default class WaterfullResovle {
     this.columnHeighs = Array.from<number>({ length: this.column }).fill(0);
     // 记录每一列的宽度 如何计算？（主视图容器宽度-每一列的间距）/列数 
     this.columnWidth = (this.el.clientWidth - (this.column - 1) * this.gap) / this.column
+    this.currentIndex = 0
     this.init()
   }
   init () {
+    // 给主视图容器设置定位
     this.el.style.position = 'relative'
     // 获取所有子项
-
     const children = Array.from(this.el.children) as HTMLElement[];
-
-    // 统一设置子项的宽度
-    children.forEach(ele => {
-      // 设置当前子项布局为绝对定位
-      ele.style.position = 'absolute'
-      // 设置每个子项（每列）的宽度,如何计算？（主视图容器宽度-每一列的间距）/列数 
-      ele.style.width = `${ this.columnWidth }px`
-    })
-
     // 初始化渲染
     children.length && this.renderOk()
   }
@@ -128,11 +124,16 @@ export default class WaterfullResovle {
   async renderOk () {
     // 获取所有子项
     const children = Array.from(this.el.children) as HTMLElement[];
-
+    
     // 遍历所有子项
-    for (let i = 0; i < children.length;) {
+    for (let i = this.currentIndex; i < children.length;this.currentIndex=i) {
       const ele = children[ i ]
+
       if (i < this.column) {
+        // 设置当前子项布局为绝对定位
+        ele.style.position = 'absolute'
+        // 设置每个子项（每列）的宽度,如何计算？（主视图容器宽度-每一列的间距）/列数 
+        ele.style.width = `${ this.columnWidth }px`
         // 当前为第一行 则直接设置当前行子项的偏移量
         const img = ele.querySelector('img') as HTMLImageElement
         // 检查图片是否需要加载
@@ -164,6 +165,10 @@ export default class WaterfullResovle {
         for (let j = 0; j < mapColumnList.length; j++) {
           // 当前行的某一列子项
           const currentEle = children[ i + j ]
+          // 设置当前子项布局为绝对定位
+          currentEle.style.position = 'absolute'
+          // 设置每个子项（每列）的宽度,如何计算？（主视图容器宽度-每一列的间距）/列数 
+          currentEle.style.width = `${ this.columnWidth }px`
           const img = currentEle.querySelector('img') as HTMLImageElement
           // 检查图片是否需要加载
           if (!img.complete) {
