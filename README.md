@@ -1464,9 +1464,220 @@ API
 ​	popState会在浏览器前进后退时会触发，函数可以接受到一个事件对象，里面有对应pushState时传入的state，事件触发后可以根据当前pathname匹配路由表来渲染对应路由
 
 
+### 十一、文件切片简易版
+
+#### 1.后端实现
+文件切片上传，总体思路：
+  1.把收到的某个切片文件存放在一个切片文件夹中（该文件夹唯一标识一个文件）
+  2.将目标切片文件夹中的所有切片合并成一个文件，删除所有切片和对应切片文件夹即可
+后端实现需要接触到许多fs模块的内容，许多API都是一知半解，能用就行那种程度
+
+##### 文件切片上传
+  文件切片上传，通过文件名称创建切片文件夹，将后续请求所有的切片文件都写入到该文件夹中。
+  约定好form-data中的字段名为(实际情况按照开发需求定，下列情况中，文件名称和解析方式都具有特殊性)：
+  **fileName**:文件名称，不包括扩展名，用来创建切片文件夹名称(文件名不能出现如：.或_，会影响解析和创建文件)
+  **chunkName**:切片的名称，形如 xxx.png_0,xxx为文件名称，png为文件扩展名，_0为文件切片时的索引，后端需要通过索引号按顺序合并成文件，才能正确的访问文件
+  **chunkFile**:切片文件，用来保存到切片文件夹中。
+  需要解析请求体里面的form-data中的各个对象，我们使用@koa/multer来解析form-data中的数据:
+  ```ts
+router.post(
+  '/file-chunk',
+  // 解析请求体中的字段（文件字段必须声明，非文件字段可声明可不声明）
+  upload.fields(
+    [
+      {
+        // 分片名（分片名称的格式 xxx.png_0）
+        name: 'chunk-name'
+      },
+      {
+        // 分片文件
+        name: 'chunk',
+        maxCount: 1
+      },
+      {
+        // 文件名称
+        name: 'file-name'
+      }
+    ]
+  ),
+  ()=>{
+    // 中间件部分
+  }
+)
+
+  ```
+  通过中间件我们获取到解析成功后的请求体，用fileName来创建文件夹，创建之前需要先检查文件夹是否存在，若存在则直接将切片文件保存到文件夹中，没有需要创建后，再存放到切片文件夹中。
+  fs.mkdir创建文件夹
+  fs.existsSync查询文件夹是否存在
+  fs.writeFile来将切片文件保存到对应切片文件夹中
+  中间件实现：
+  ```ts
+// 文件分片上传
+// 使用@koa/multer可以自动配置上传form-data时的字段名，从而进行解析
+// 非文件字段会被保存到ctx.request.body中
+// 文件字段会被保存到ctx.request.files中
+router.post(
+  '/file-chunk',
+  // 解析请求体中的字段（文件字段必须声明，非文件字段可声明可不声明）
+  upload.fields(
+    [
+      {
+        // 分片名（分片名称的格式 xxx.png_0）
+        name: 'chunk-name'
+      },
+      {
+        // 分片文件
+        name: 'chunk',
+        maxCount: 1
+      },
+      {
+        // 文件名称
+        name: 'file-name'
+      }
+    ]
+  ),
+  (ctx) => {
+    // 非文件的form-data字段会被解析到body里
+    // console.log(ctx.request.body);
+    // 文件会被保存到ctx.request.files中
+    // console.log(ctx.request.files);
+
+    // 1.解析form-data中的数据
+    // @ts-ignore 获取文件列表
+    const fileList: any = ctx.request.files
+    // 解析分片文件
+    const file = fileList[ 'chunk' ][ 0 ]
+    // 解析出分片文件的文件名称
+    const chunkName = ctx.request.body[ 'chunk-name' ]
+    // 解析出文件的名称(以文件的名称来创建文件夹)
+    const fileName = ctx.request.body[ 'file-name' ]
+
+    // 2.创建文件夹，用于存放分片文件（根据文件名称来创建文件夹，将所有分片文件保存到文件夹中）
+    // 文件夹路径
+    const chunkDirPath = path.resolve('./static/chunk', `./${ fileName }`)
+    if (!fs.existsSync(chunkDirPath)) {
+      // 文件不存在 创建文件夹
+      fs.mkdirSync(chunkDirPath)
+    }
+    // 3.将当前分片文件保存在分片文件夹中
+    const chunkFilePath = path.resolve(chunkDirPath, `./${ chunkName }`)
+    // 将文件保存到分片文件夹中
+    try {
+      fs.writeFileSync(chunkFilePath, file.buffer)
+      ctx.body = {
+        msg: 'save ok',
+        fileName,
+        chunkName
+      }
+    } catch (error) {
+      console.log(error);
+      ctx.body = {
+        msg: 'save fail',
+        fileName,
+        chunkName
+      }
+    }
+  }
+)
+  ```
 
 
+#### 将切片文件合并
+  切片合并，约定：需要传入合并的文件夹名称与切片时每一份数据的大小，再读取切片文件夹，遍历所有切片文件，将切片文件写入到合并文件中，最后删除切片文件。
 
+  查询参数：
+  **fileName**:通过fileName来找到需要合并的切片文件夹(本地中切片文件夹目录必须存在该文件夹)
+  **size**:解析每份切片文件的大小，在合并文件时需要按照字节顺序依次写入内容。
+  
+  先通过fileName到切片文件目录中查询是否存在该文件夹，存在则拼接出路径，读取该文件夹中所有的切片文件名称，并通过索引顺序来排序。
+  在对应目录下通过文件流的方式创建合并文件，遍历排序切片文件名称数组，将切片名称拼接成路径通过文件流的方式读取文件，按照字节顺序写入到合并文件中。
+  fs.readdirSync读取文件夹中的所有文件名称
+  fs.createReadStream创建读文件流
+  fs.createWriteStream创建写文件流，可以指定从那个字节大小创建可写文件流
+  streamIns01.pipe(streamIns02)将实例01的文件流写入到实例02文件流中
+
+  ```ts
+// 合并切片的文件文件
+router.get('/merge-file', async (ctx) => {
+  // 解析需要解析的文件名称
+  if (ctx.query.fileName === undefined || ctx.query.size === undefined) {
+    return ctx.body = 'fileName or size is query need!'
+  }
+  // 文件名称
+  const fileName = ctx.query.fileName as string
+  // 分片大小为多少？
+  const size = +ctx.query.size
+
+  const res = await resolveMerge(fileName, size)
+
+  if (res === 0) {
+    ctx.body = 'file not exist!'
+  } else {
+    ctx.body = res
+  }
+
+})
+
+async function resolveMerge (fileName: string, size: number) {
+  // 切片文件夹的路径（一个文件夹代表一个文件）
+  const chunkDirPath = path.resolve('./static/chunk', `./${ fileName }`)
+  // 1.查询文件是否存在
+  if (!fs.existsSync(chunkDirPath)) {
+    // 文件不存在
+    return Promise.resolve(0)
+  }
+  // 文件存在
+  // 2.读取该切片文件夹中的所有文件名称
+  const fileNameList = fs.readdirSync(chunkDirPath)
+  // @ts-ignore 切片名称为 xxx.png_0 需要按照索引顺序进行排序，避免文件被混乱的合并
+  fileNameList.sort((a, b) => a.split('_')[ 1 ] - b.split('_')[ 1 ])
+
+  // 3.遍历所有切片合并文件，并删除切片文件夹
+  const res = fileNameList.map((chunkName, index) => {
+    // 当前切片的路径
+    const chunkFilePath = path.resolve(chunkDirPath, `./${ chunkName }`)
+    // 需要合并的文件路径(合并后文件的路径)
+    const filePath = path.resolve('./static/file', `${ chunkName.split('_')[ 0 ] }`)
+
+    // 根据当前切片的路径，访问该切片，将该切片写入到目标文件中
+    return pipeStream(
+      chunkFilePath,
+      // 根据size的指定位置创建可写流
+      fs.createWriteStream(filePath, {
+        start: index * size
+      })
+    )
+  })
+  // 等待全部切片写入完成
+  await Promise.all(res)
+  // 全部切片写入完成后，就删除该切片文件夹
+  fs.rmdirSync(chunkDirPath)
+
+  return Promise.resolve({
+    fileName,
+    filePath: 'http://127.0.0.1:3000/file' + '/' + fileNameList[ 0 ].split('_')[ 0 ]
+  })
+}
+
+// 写入文件流
+function pipeStream (chunkPath: string, writeStream: fs.WriteStream) {
+  return new Promise<void>(r => {
+    // 读取切片流
+    const readStream = fs.createReadStream(chunkPath)
+    // 读取完成就删除该切片
+    readStream.on("end", () => {
+      fs.unlinkSync(chunkPath)
+      r()
+    })
+    // 将切片流写入到目标文件流中
+    readStream.pipe(writeStream)
+  })
+}
+
+  ```
+
+上述只是实现了切片文件并合并的一种方式，写得很特殊，没法考虑到解析时文件名和扩展名的问题，只是提供一种思路。
+不论是createReadStream和createWriteStream都可以指定从那个字节开始读取/写入数据，也可以指定end，表示读取/写入到对应字节结束。
 
 
 
