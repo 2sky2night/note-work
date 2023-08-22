@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <a href="/#/home">home</a>
+  <a href="/#/user">user</a>
+  
+  <div class="router-view"></div>
+
+  <script>
+    location.hash='/'
+    const routerView = document.querySelector('.router-view')
+    const routes=[
+      {
+        path:'/',
+        template:'<div>Home</div>'
+      },
+      {
+        path:'/user',
+        template:'<div>User</div>'
+      }
+    ]
+
+    const onHandleHashChange=()=>{
+      const path = location.hash.slice(1)
+      routes.some(route=>{
+        if(route.path===path){
+          routerView.innerHTML=route.template
+        }
+      })
+    }
+
+    onHandleHashChange()
+    
+
+  </script>
+</body>
+</html>

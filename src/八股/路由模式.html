@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <!--历史模式-->
+  <a onclick="onHandlePush('/')">home</a>
+  <a onclick="onHandlePush('/user')">user</a>
+
+  <!--hash模式-->
+  <!-- <a href="/#/">home</a>
+  <a href="/#/user">user</a> -->
+  <div class="router-view"></div>
+
+  <!-- <script>
+    // hash模式
+    const routerView = document.querySelector('.router-view')
+    const routes = [
+      {
+        path: '/',
+        template: '<div>Home</div>'
+      },
+      {
+        path: '/user',
+        template: '<div>User</div>'
+      }
+    ]
+
+    const onHandleHashChange = () => {
+      const path = location.hash.slice(1)
+      console.log(path);
+      routes.some(route => {
+        if (route.path === path) {
+          routerView.innerHTML = route.template
+          console.log(route.template);
+          return true
+        }
+      })
+    }
+
+    if (location.hash === "") {
+      location.hash = '/'
+    } else {
+      // 设置了hash，需要根据hash值来匹配路由
+      onHandleHashChange()
+    }
+
+    window.onhashchange = onHandleHashChange
+
+  </script> -->
+
+  <script>
+    // history
+    const routerView = document.querySelector('.router-view')
+    const routes = [
+      {
+        path: '/',
+        template: '<div>Home</div>'
+      },
+      {
+        path: '/user',
+        template: '<div>User</div>'
+      }
+    ]
+
+    const onHandlePathnameChange = () => {
+      const path = location.pathname
+      routes.some(route => {
+        if (route.path === path) {
+          routerView.innerHTML = route.template
+          return true
+        }
+      })
+    }
+
+    // 点击a链接编程式导航
+    const onHandlePush = (path) => {
+      history.pushState({},'',path)
+      onHandlePathnameChange()
+    }
+
+    onHandlePathnameChange()
+    window.onpopstate = onHandlePathnameChange
+
+  </script>
+</body>
+
+</html>
