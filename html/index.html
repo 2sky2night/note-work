@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <script>
+    function A (name) {
+      this.name = name
+    }
+    function B (name, age) {
+      A.call(this, name)
+      this.age = age
+    }
+
+    /**
+     * 手动创建一个原型
+     */
+    function getProto (father, children, publicAttrs = {}) {
+      // Object.create会创建一个空对象，对象的隐式原型为传入的对象
+      children.prototype = Object.create(father.prototype)
+      // 创建构造函数
+      children.prototype.constructor = children
+      // 给原型绑定公共方法和属性
+      Reflect.ownKeys(publicAttrs).forEach(key => {
+        children.prototype[ key ] = publicAttrs[ key ]
+      })
+    }
+
+    getProto(A, B,{
+      getAge(){
+        return this.age
+      }
+    })
+
+    console.log(new B('Mark', 18))
+// 同类型实例共享一个父类实例
+    // function A (name) {
+    //   this.name = name
+    // }
+    // A.prototype.getName=function(){
+    //   return this.name
+    // }
+    // function B (name,age) {
+    //   // 获取所有基类的属性
+    //   A.call(this,name)
+    //   this.age = age
+    // }
+    // // 获取基类原型
+    // B.prototype.__proto__ = A.prototype
+    // console.log(new B('Mark',12));
+  </script>
+</body>
+
+</html>
