@@ -1335,15 +1335,18 @@ defineOptions({ name: 'Modal' })
 ```
 
 
-https://juejin.cn/post/7151950058501373989 vue+tsx
 
-八全局注册的组件配置ts类型支持
+
+### 六、 vue+tsx
+
+https://juejin.cn/post/7151950058501373989
+
 ### 七、全局组件的ts类型提示
 
 https://blog.csdn.net/weixin_43972992/article/details/124755426 
 [全局组件类型声明的最佳实践 (Vue3+TS+Volar) - 掘金 (juejin.cn)](https://juejin.cn/post/7066730414626308103)
 
-九、封装鉴权按钮组件
+### 八、封装鉴权按钮组件
 
 ​	页面中有很多按钮都需要用户登录才能使用的，如果给每个按钮的点击事件添加判断登录的逻辑多少有点繁琐，所以就想自己封装一个鉴权组件（最开始想用自定义指令实现的，奈何自定义指令没办法捕获点击事件）。
 
@@ -1389,7 +1392,7 @@ defineSlots<{
 
 
 
-十、路由模式
+### 九、路由模式
 
 浏览器的路由模式有两种:history和hash模式，他们的表现形式都是在url呈现的，只不过hash模式以hash值表述，history模式以模拟路径表示，他们两个相同点都是值发生变化时都不会导致http请求，比较大的不同点是第一次加载页面时，会发生一次网络请求加载html资源，但是hash值不会被后端接受到，而history模式下对应的模拟路径也会被当成请求的路径，从而会导致不能正确的加载html资源
 
@@ -1463,8 +1466,7 @@ API
 
 ​	popState会在浏览器前进后退时会触发，函数可以接受到一个事件对象，里面有对应pushState时传入的state，事件触发后可以根据当前pathname匹配路由表来渲染对应路由
 
-
-### 十一、文件切片简易版
+### 十、文件切片简易版
 
 #### 1.后端实现
 文件切片上传，总体思路：
@@ -1588,7 +1590,7 @@ router.post(
   查询参数：
   **fileName**:通过fileName来找到需要合并的切片文件夹(本地中切片文件夹目录必须存在该文件夹)
   **size**:解析每份切片文件的大小，在合并文件时需要按照字节顺序依次写入内容。
-  
+
   先通过fileName到切片文件目录中查询是否存在该文件夹，存在则拼接出路径，读取该文件夹中所有的切片文件名称，并通过索引顺序来排序。
   在对应目录下通过文件流的方式创建合并文件，遍历排序切片文件名称数组，将切片名称拼接成路径通过文件流的方式读取文件，按照字节顺序写入到合并文件中。
   fs.readdirSync读取文件夹中的所有文件名称
@@ -1679,9 +1681,85 @@ function pipeStream (chunkPath: string, writeStream: fs.WriteStream) {
 上述只是实现了切片文件并合并的一种方式，写得很特殊，没法考虑到解析时文件名和扩展名的问题，只是提供一种思路。
 不论是createReadStream和createWriteStream都可以指定从那个字节开始读取/写入数据，也可以指定end，表示读取/写入到对应字节结束。
 
+### 十一、Vue命令式组件实践
+
+​	以往封装的命令式组件往往都是通过h和render，临时渲染的组件，并且文件拆分成了几个（函数文件、组件文件、样式文件），非常零散。
+
+​	这一次可以通过jsx+css-in-js实现一个文件即可完成命令式组件的封装
+
+```tsx
+
+import { Component, createApp } from "vue";
+import "./index.css"; //这个只是真实DOM的样式，其实也可以不使用，将其封装成组件也可以。
+// css-in-js的vue插件
+import { styled } from "@styils/vue";
+
+// 配置了样式的组件元素
+// styled会创建一个组件，在传入参数时可以选择组件的tagName和对应样式，并且最终渲染时会通过class选择器给元素配置样式的。
+// 消息容器
+const BoxContainer = styled("div", {
+  backgroundColor: "#fff",
+  borderRadius: "5px",
+  height: "150px",
+  width: "80%",
+  maxWidth: "500px",
+  padding: "10px",
+  boxSizing: "border-box",
+});
+// 按钮
+const ConfirmButton = styled("button", {
+  border: "none",
+  padding: "5px 10px",
+  backgroundColor: "skyblue",
+  color: "#fff",
+  cursor:'pointer'
+});
+
+// 组件配置项
+const MessageBox: Component = {
+  // 自定义熟悉
+  props: {
+    title: {
+      type: String,
+      required: true,
+    },
+  },
+ // 定义的方法
+  methods: {
+    onHandleClick() {
+      this.$emit("toClose");
+    },
+  },
+  // 自定义事件
+  emits: ["toClose"],
+  // 组件的render函数
+  render(ctx: any) {
+    return (
+      <BoxContainer>
+        <div class="content">{ctx.title}</div>
+        <ConfirmButton onClick={ctx.onHandleClick}>确认</ConfirmButton>
+      </BoxContainer>
+    );
+  },
+};
+
+// 创建消息盒子的函数
+export default function (title: string) {
+  const container = document.createElement("div");
+  container.classList.add("message_box_mask_container");
+  const app = createApp(MessageBox, {
+    title,
+    onToClose: () => {
+      app.unmount();
+      container.remove();
+    },
+  });
+  app.mount(container);
+  document.body.appendChild(container);
+}
 
 
-
+```
 
 
 

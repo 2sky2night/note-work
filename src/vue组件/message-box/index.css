@@ -1,0 +1,8 @@
+.message_box_mask_container{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  inset: 0;
+  position: fixed;
+  background-color: #0000006b;
+}
