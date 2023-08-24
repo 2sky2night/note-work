@@ -1,0 +1,32 @@
+.message_container {
+  position: fixed;
+  flex-direction: column;
+  top: 12px;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.message_item {
+  margin-bottom: 10px;
+}
+
+.message_item_enter {
+  animation: messageMove .3s ease;
+}
+
+.message_item_leave {
+  animation: messageMove .3s ease reverse;
+}
+
+@keyframes messageMove {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}

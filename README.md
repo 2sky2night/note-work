@@ -1335,11 +1335,26 @@ defineOptions({ name: 'Modal' })
 ```
 
 
-
-
 ### 六、 vue+tsx
 
 https://juejin.cn/post/7151950058501373989
+安装
+```shell
+pnpm add @vitejs/plugin-vue-jsx -D
+```
+安装完成后在vite配置文件中安装插件
+
+```js
+import vueJsx from "@vitejs/plugin-vue-jsx";
+
+export default defineConfig({
+  plugins: [
+    vueJsx(),
+  ]
+})
+
+```
+
 
 ### 七、全局组件的ts类型提示
 
@@ -1685,8 +1700,8 @@ function pipeStream (chunkPath: string, writeStream: fs.WriteStream) {
 
 ​	以往封装的命令式组件往往都是通过h和render，临时渲染的组件，并且文件拆分成了几个（函数文件、组件文件、样式文件），非常零散。
 
-​	这一次可以通过jsx+css-in-js实现一个文件即可完成命令式组件的封装
-
+​	这一次可以通过jsx+css-in-js（@styils/vue）实现一个文件即可完成命令式组件的封装
+ @styils/vue： https://styils.github.io/styils/
 ```tsx
 
 import { Component, createApp } from "vue";
