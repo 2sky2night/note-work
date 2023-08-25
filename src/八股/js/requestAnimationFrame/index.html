@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    div {
+      height: 80px;
+      width: 200px;
+      background-color: skyblue;
+      margin-bottom: 5px;
+    }
+
+    .move {
+      animation: move 1 3s forwards linear;
+    }
+
+    @keyframes move {
+      to {
+        transform: translateX(500px);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <button onclick="onHandleClick()">开始!</button>
+  <div class="box1">keyframes</div>
+  <div class="box2">setTimeout</div>
+  <div class="box3">requestAnimationFrame</div>
+  <script>
+    const box1 = document.querySelector('.box1')
+    const box2 = document.querySelector('.box2')
+    const box3 = document.querySelector('.box3')
+
+    // 3秒后移动500像素，每六毫秒移动1像素
+    const setTimeoutMove = () => {
+      let move = 0
+      return function fun () {
+        if (move >= 500) {
+          return
+        }
+        setTimeout(() => {
+          move++
+          box2.style.transform = `translateX(${ move }px)`
+          fun()
+        }, 6)
+      }
+    }
+
+    const keyframesFun = () => {
+      let start
+      return function fun (timestamp) {
+        // timestamp为程序开始，到执行回调函数的时间
+        if (start === undefined) {
+          // 获取开始时间
+          start = timestamp
+        }
+        // 计算当前执行了多少秒了
+        const nowTime = timestamp - start
+        if (nowTime > 3000) {
+          // 3秒后不执行动画
+          return
+        }
+        // 通过移动了多少毫秒来设置每帧移动的偏移量
+        // 公式：
+        // 0.1 * nowTime，多少秒移动多少偏移量，nowTime为当前动画执行的时间
+        // Math.min(0.x * nowTime,最大移动的偏移量)，可以加大倍率，直到符合预期
+        box3.style.transform = `translateX(${ Math.min(0.2 * nowTime,500) }px)`
+        window.requestAnimationFrame(fun)
+      }
+    }
+
+    const onHandleClick = () => {
+      box1.classList.add('move')
+      setTimeoutMove()()
+      window.requestAnimationFrame(keyframesFun())
+
+    }
+  </script>
+</body>
+
+</html>

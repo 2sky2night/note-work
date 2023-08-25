@@ -1,0 +1,30 @@
+.mask-container {
+  position: fixed;
+  background-color: #00000079;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.enter {
+  animation: .3s 1 toMove forwards;
+}
+
+.leave {
+  animation: .3s 1 toMove forwards reverse;
+}
+
+@keyframes toMove {
+  from {
+    top: var(--top);
+    left: var(--left);
+  }
+
+  to {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+}

@@ -1777,7 +1777,196 @@ export default function (title: string) {
 ```
 
 
+### 十二、指令式预览元素（元素共享效果）
+#### 效果
+  通过封装的指令，让目标元素拥有预览的效果（且过渡动画算元素共享效果？），点击目标元素展示预览效果并隐藏目标元素，点击遮罩层或滚动、拉伸事件取消预览。
+  需要用到Node.clone这个API来克隆元素,注意：`克隆一个元素节点会拷贝它所有的属性以及属性值，当然也就包括了属性上绑定的事件 (比如onclick="alert(1)"),但不会拷贝那些使用addEventListener()方法或者node.onclick = fn这种用 JavaScript 动态绑定的事件。`
+#### 实现原理
+##### 基本实现
+  1.克隆（深克隆，可以克隆后代元素）目标元素
+  2.创建遮罩层容器，让克隆元素添加到里面成为子元素
+  3.给目标元素绑定点击事件回调`callback01`，在回调内部实现添加遮罩层容器和克隆元素的动画效果，完成预览功能
+  4.给遮罩层容绑定点击事件回调`callback02`，在回调内部实现立场效果和移除遮罩层容器，完成点击取消预览功能
+##### 完善
+  5.在模块中声明变量`global`，作用是保存`callback02`函数，给window绑定scroll和resize事件，触发就执行`callback02`完成取消预览功能。
+  6.基于步骤3，在点击目标元素的事件回调中，通过预览的唯一性，将`global`的值赋值为`callback02`，在window的scroll和resize事件时就能够成功触发取消预览功能。
+  7.基于步骤4，在取消预览时，需要重置`global`为`null`，保证取消预览后再触发给window绑定scroll和resize事件时不会调用`global`函数。
+##### 动画实现
+  1.(克隆元素的起始位置):在点击目标元素时，克隆元素需要从目标元素的位置移动到视口中间位置。所以在点击时通过`getBoundingClientRect`来获取**目标元素基于视口左上角的位置信息**（`top`、`left`，视口左上角距离目标元素左上角的距离）,这个偏移量正是遮罩层距离初始位置的克隆元素的偏移量（因为遮罩层就是视口大小，而遮罩层设置了fixed定位），**为了后续css的实现，所以将这两个变量通过style.setProperty保存在克隆元素(遮罩层也行，只要保证css变量能够访问，css变量是继承的)中**
+  2.(动画实现):由于top、left起始值保存了，由于克隆元素需要基于绝对定位来实现，所以需要将克隆元素设置为绝对定位，在样式文件中定义克隆元素的动画。而为了动画能够成功设置所以定义了进场和离场两个class，完成复用动画。
+  ```css
+.enter {
+  animation: .3s 1 toMove forwards;
+}
 
+.leave {
+  animation: .3s 1 toMove forwards reverse;
+}
+
+@keyframes toMove {
+  from {
+    top: var(--top);
+    left: var(--left);
+  }
+
+  to {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+}
+  ```
+  3.(绑定动画):在出场时添加enter进场动画，动画结束后删除，在取消预览时先添加leave离场动画，动画结束后删除，就大功告成了。
+#### 使用方式
+```vue
+<template>
+  <div class="list">
+    <img src="@/imgs/01.png" v-element>
+    <img src="@/imgs/01.png" v-element>
+    <img src="@/imgs/01.png" v-element>
+  </div>
+</template>
+
+<script lang='ts' setup>
+import element from './components/element';
+defineOptions({
+  directives: {
+    element
+  }
+})
+</script>
+
+<style scoped lang='scss'>
+.list {
+  display: flex;
+  flex-direction: column;
+  padding: 100px;
+  align-items: center;
+  height: 500vh;
+  img {
+    cursor: pointer;
+    width: 300px;
+    margin-bottom: 10px;
+  }
+}
+</style>
+```
+#### 代码
+#### css
+```css
+.mask-container {
+  position: fixed;
+  background-color: #00000079;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.enter {
+  animation: .3s 1 toMove forwards;
+}
+
+.leave {
+  animation: .3s 1 toMove forwards reverse;
+}
+
+@keyframes toMove {
+  from {
+    top: var(--top);
+    left: var(--left);
+  }
+
+  to {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+}
+```
+##### js
+```ts
+import type { Directive } from 'vue';
+import './index.css'
+
+// 取消预览的事件回调 
+// 因为同一时间预览只会预览一个，所以只需要保存这一个回调即可，滚动条事件触发就执行回调
+let handle: null | Function = null
+window.addEventListener('scroll', () => {
+  handle && handle()
+})
+window.addEventListener('resize', () => {
+  handle && handle()
+})
+
+
+export default {
+  /**
+   * 1.深拷贝目标元素，做为预览
+   * 2.创建遮罩层作为预览时的容器，将元素放到遮罩层中去
+   * 3.给目标元素绑定点击事件，点击显示容器，并通过css隐藏自身
+   * 4.给遮罩层绑定点击事件，点击时移除容器
+   * 5.通过预览时的唯一性，来保存一个移除时的回调，在滚动事件和拉伸事件时取消预览
+   * @param el 
+   */
+  mounted (el) {
+
+    // 克隆当前元素
+    const elCopy = el.cloneNode(true) as HTMLElement
+    // 遮罩层
+    const maskContainer = document.createElement('div')
+    maskContainer.classList.add('mask-container')
+    // 创建遮罩层，让元素成为为遮罩层的子元素
+    maskContainer.appendChild(elCopy)
+
+
+    // 点击遮罩层取消预览的事件回调
+    const onHandleClick = (e?: Event) => {
+      if (e && e.target === elCopy) {
+        // 若时点击的目标元素，停止冒泡
+        return
+      }
+      // 执行时将全局的置空(重要)
+      handle = null
+      // 添加离场动画
+      elCopy.classList.add('leave')
+      setTimeout(() => {
+        // 动画执行完后移除立场动画
+        elCopy.classList.remove('leave')
+        maskContainer.remove()
+        el.style.visibility = 'visible'
+      }, 300)
+    }
+
+    // 点击遮罩层取消预览,恢复目标元素的样式
+    maskContainer.addEventListener('click', onHandleClick)
+
+    // 点击事件的回调 并隐藏当前元素
+    el.addEventListener('click', () => {
+      // 将点击遮罩层取消预览的事件保存到全局
+      handle = onHandleClick
+      // 获取目标元素距离视口的位置
+      const { top, left } = el.getBoundingClientRect()
+      // 给容器（给克隆元素也行）挂载当前元素距离视口位置的属性 (最关键的地方)
+      maskContainer.style.setProperty('--top', `${ top }px`)
+      maskContainer.style.setProperty('--left', `${ left }px`)
+      // 设置子元素的绝对定位，配合动画
+      elCopy.style.position = 'absolute'
+      // 给子元素加入入场动画
+      elCopy.classList.add('enter')
+      setTimeout(() => {
+        // 动画结束后删除入场动画
+        elCopy.classList.remove('enter')
+      }, 300)
+      el.style.visibility = 'hidden'
+      document.body.appendChild(maskContainer)
+    })
+
+  }
+} as Directive<HTMLElement, undefined>
+
+```
 
 
 
