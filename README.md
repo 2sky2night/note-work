@@ -1968,13 +1968,209 @@ export default {
 
 ```
 
+## TS装饰器
+  装饰器是用来修饰装饰对象的，可以为其添加额外功能且可以复用代码，装饰器就是一个函数，封装了给修饰对象添加额外功能的代码。
+  装饰器按照写法有：普通装饰器、装饰器工厂
+  装饰器按照类别有：类装饰器、属性装饰器、方法装饰器、参数装饰器。
+  属性、方法、参数装饰器作用在静态属性上target是构造函数，作用在属性上target是原型对象
+### 写法
+#### 普通装饰器
+  装饰器的就是个函数，只要用了装饰器后就相当于调用了这个函数。调用时，函数实参就是被装饰的对象
+##### 使用装饰器
+```ts
+// 这里的接口只是为了装饰器中的操作进行类型支持
+interface Person {
+  sayHello: () => void
+}
+function Enhancer (target: Function) {
+  target.prototype.sayHello = () => {
+    console.log('Hello');
+  }
+}
+@Enhancer
+class Person {
+
+}
+new Person().sayHello() // Hello
+
+```
+##### 不使用装饰器
+```ts
+interface Person {
+  sayHello: () => void
+}
+function Enhancer (target: Function) {
+  target.prototype.sayHello = () => {
+    console.log('Hello');
+  }
+}
+
+class Person {
+
+}
+Enhancer(Person)
+new Person().sayHello() // Hello
+```
 
 
+#### 装饰器工厂
+  装饰器工厂和普通装饰器的区别是，装饰器工厂可以传参，普通装饰器不能传参。通过闭包和函数柯里化的方式实现了装饰器工厂。
+##### 使用装饰器
+```ts
+function HTTPController (rootPath: string) {
+  return (target: any) => {
+    target.rootPath=rootPath
+  }
+}
+
+@HTTPController('/user')
+class UserController {
+  static rootPath: string
+  getUserInfo () {
+
+  }
+}
+
+console.log(UserController);
 
 
+```
+
+##### 不使用装饰器
+```ts
+function HTTPController (rootPath: string) {
+  return (target: any) => {
+    target.rootPath=rootPath
+  }
+}
 
 
+class UserController {
+  static rootPath: string
+  getUserInfo () {
+
+  }
+}
+HTTPController('/user')(UserController)
+console.log(UserController);
+
+```
+
+#### 重新定义class
+  若返回的是一个class，则会以返回的这个class类来覆盖原有的类定义
+```ts
+function Overload (target: any) {
+  return class extends target {
+    constructor () {
+      // 每次实例化时，都会调用该构造函数
+      super()
+      console.log('overload'); 
+    }
+    sayHello () {
+      console.log('Overload hello');
+    }
+  }
+}
+
+@Overload
+class Foo {
+  constructor () {
+    // 每次实例化时，都会调用该构造函数
+    console.log('Foo constructor');
+  }
+  sayHello () {
+    console.log('Foo sayHello');
+  }
+}
+
+new Foo().sayHello(); // Overload hello
+```
+### 类别
+#### 类装饰器
+  用来修饰类的装饰器，装饰器修饰类时，会把类（构造函数）当作实参传入调用装饰器函数。
+```ts
+function SetSayHello (target: any) {
+  target.prototype.sayHello = () => {
+    console.log('hello');
+  }
+}
+
+interface Person {
+  sayHello: () => void
+}
+
+@SetSayHello
+class Person { }
+new Person().sayHello()
+```
+#### 属性装饰器
+  属性装饰器可以接受两个参数，target和key，key就是装饰的属性名称。若属性装饰器作用在静态属性上，则target就是构造函数，若属性装饰器作用在属性上，则target就是原型对象。
+```ts
+function property (target:any,key:string) {
+  console.log(target,key);
+}
+class Person {
+  // 静态属性，则target就是构造函数
+  @property
+  static hasCount () {
+    return '72亿'
+  }
+  // 属性，则target就是原型对象
+  @property
+  name: string
+  constructor (name: string) {
+    this.name = name
+  }
+}
+
+```
+
+#### 方法装饰器
+ 方法装饰器可以接受三个参数，target、key、describe，key是修饰的属性名称，describe是属性描述（Obeject.defineProperty的第三个参数）。若方法装饰器作用在静态属性上target就是构造函数，若方法装饰器作用在属性上，则target就是原型对象。
+```ts
+function method (target:any,key:string,descriptor:PropertyDescriptor) {
+  console.log(target, key, descriptor);
+}
+class Person {
+  // target是原型对象
+  @method
+  sayHello () {
+    console.log('hello~');
+  }
+  // target是构造函数
+  @method
+  static getCount () {
+    return 123456
+  }
+}
+
+```
+
+#### 参数装饰器
+ 参数装饰器可以接受三个参数，target、key、argIndex，key是方法(属性)的名称，argIndex是该参数在形参列表中所处的索引。若参数装饰器作用在静态方法中，则target就是构造函数，若参数装饰器作用在方法中，则target就是原型对象。
+```ts
+function params (target: any, key: string, argIndex: number) {
+  console.log(target, key, argIndex);
+}
+
+class Foo {
+  // target:[class Foo],key:'bar',argIndex:1
+  static bar (str: string, @params num: number) {
+    console.log(str,num);
+  }
+  // target:Foo.prototype,key:'fun',argIndex:0
+  fun (@params num: number) {
+    console.log(num);
+  }
+}
+
+```
 
 
+### 执行顺序
 
-
+首先执行实例相关：参数装饰器 > 方法装饰器 > 访问器装饰器 > 属性装饰器
+然后执行静态相关：参数装饰器 > 方法装饰器 > 访问器装饰器 > 属性装饰器
+然后执行构造函数的参数装饰器
+最后是类装饰器
+多个装饰器装饰同一个数据时，从下往上依次执行
