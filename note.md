@@ -1,16 +1,330 @@
 面筋与知识总结：✨面筋 🎉知识
 1.✨ https://juejin.cn/post/7064740689178787871
 2.🎉 https://juejin.cn/post/7202904269535887418
+3.🎉 https://interview.html5.wiki/#%E7%9F%A5%E8%AF%86%E7%82%B9%E6%A2%B3%E7%90%86
+4.🎉 https://juejin.cn/post/6919373017218809864
 
-# css
-## BFC
+# 一、浏览器
+
+## 1.浏览器渲染原理
+
+​	浏览器渲染原理是指将工程中的`HTML`、`CSS`、`Javascript`转换成用户可以看到的网页。
+
+### 浏览器渲染的大致流程
+
+1.处理HTML，通过解析html构建成DOM树
+
+2.处理CSS，通过解析css构建成CSSOM树
+
+3.将DOM和CSSOM树合并成一个渲染树
+
+4.根据渲染树来布局，计算每个节点的位置。
+
+5.调用GPU绘制文档，显示在浏览器页面中。
+
+### 详细
+
+1.浏览器逐行解析HTML字符串
+
+2.处理HTML，将HTML解析成DOM树
+
+3.处理CSS，将CSS解析成CSSOM树
+
+4.在解析过程中可能会出现需要加载的外部资源，浏览器会发送请求加载外部资源，若资源是同步加载的可能会出现阻塞浏览器渲染线程的情况。
+
+5.解析HTML字符串完成后，将DOM树与CSSOM树合并成渲染树
+
+6.通过GPU将渲染树渲染到页面中。
+
+## 2.重排重绘
+
+​	重排重绘是浏览器渲染过程的机制。
+
+### 重绘
+
+当页面中某个元素样式的改变不会影响页面布局时（元素尺寸不发生变化或元素样式不影响其他元素的位置时），浏览器会将新样式绘制给该元素，这个过程就是重绘。
+
+1.color
+
+2.opacity
+
+3.visibility
+
+4.box-shadow
+
+5.transform
+
+...
+
+### 重排
+
+当页面中某个元素或全部元素的尺寸、大小、位置、结构发生变化时，会触发浏览器重新渲染部分元素或全部元素的过程，就是重排。
+
+例如：
+
+1.修改容器width、height、padding、border、margin
+
+2.通过定位的偏移量修改容器的位置
+
+3.浏览器尺寸变化resize
+
+4.修改添加DOM元素
+
+6.激活css伪类
+
+7.查询或修改DOM的布局属性：offsetWidth、clientWidth、getComutedStyle、scrollWidth、getBoundingClientRet（在使用这些API时为了精准性，会通过重排该元素来获取到元素精确位置。）
+
+8.字体大小
+
+9.通过js来设置style属性的值
+
+### 减少重排
+
+重绘的消耗的性能较小，在性能优化时我们一般都不考虑。但重排的开销比重绘高很多，重排会导致元素的重新渲染以及重绘。总的来说就是在重排时尽量不要响应其他元素；减少读取布局属性；
+
+通过以下方式减少重排：
+
+1.**（使用请求动画帧）**请求动画帧API会将多次操作合并成一次渲染当中，用来取代setTimeout。
+
+2.（**使用文档片段**）插入多个元素时，可以在内存中创建createDocumentFragment，在这个模板里面插入多个元素，最后统一放到文档流中而不是每次创建一个元素就插入到DOM树中。通过这种方式只需要计算一次重排。
+
+3.（**提前编写好class**）通过js修改元素样式，可以先编写好样式的class，通过addClass来增加样式而不是style.xxx一个语句一个语句的修改，这样可以减少重排。
+
+3.（**让DOM离线**）通过js修改元素样式时，可以先让元素display:none，让DOM对象离线，无论怎么修改元素样式都不会引发重绘，只需在最后修改完成时显示元素即可，这样只会重排两次。
+
+4.（**脱离文档流**）再修改元素时先脱离文档流，修改元素完成后再进入文档流，可以在修改途中减少重排范围，脱离文档流后再怎么修改样式都只会影响当前元素的布局，只会重排当前元素。
+
+5.使用GPU加速，例如opacity、transform、filter等属性，会直接在GPU中处理，而不是重排重绘
+
+```css
+  div{
+      opacity: .8;
+      will-change: opacity; /*opacity属性会在GPU中处理*/
+    }
+```
+
+## 3.在浏览器上输入url到页面显示的步骤
+
+### 粗劣
+
+1.浏览器根据请求的URL交给DNS域名解析，找到真实的IP
+
+2.建立TCP连接，确认双方是否有能力接收和发起请求，通过则向服务器发送请求。
+
+3.服务器接收到请求后，根据请求头部以及请求体相关信息，去执行相应业务逻辑，处理好后，将html字符串相应给浏览器
+
+4.浏览器将响应回来的html字符串进行解析。在解析的过程会逐行读取HTML代码，将html解析成DOM tree ，将css解析成 CSSOM tree
+
+5.在触发解析HTML字符串可能会需要加载外部资源，会发送新的http请求，若是同步加载可能会被阻塞渲染进程。
+
+6.解析完成后，将CSSOM tree和DOM tree 合并成渲染树
+
+7.将渲染树通过GPU处理，渲染出页面。
+
+### 详细
+
+1. DNS解析：浏览器首先会提取URL中的域名，然后将其发送给DNS（域名系统）服务器来获取对应的IP地址。这个过程称为DNS解析。
+2. 建立TCP连接：浏览器使用获取到的目标IP地址与服务器建立TCP连接。TCP（传输控制协议）是一种可靠的网络传输协议，用于确保数据的可靠传输。
+3. 发送HTTP请求：建立TCP连接后，浏览器会向服务器发送HTTP请求。其中包含了请求的方法（如GET、POST等）、请求的资源路径、请求的头部信息等。
+4. 服务器处理请求：服务器接收到浏览器发送的HTTP请求后，会根据请求的资源路径和其他相关信息进行处理。这可能涉及到读取数据、查询数据库、运行脚本等操作。
+5. 服务器响应：服务器处理完请求后，会将生成的响应数据发送回给浏览器。响应中包含了HTTP状态码、响应的头部信息以及响应的主体内容。
+6. 浏览器渲染：当浏览器接收到服务器发送的响应数据后，会根据响应的内容进行解析和渲染。浏览器将HTML、CSS和JavaScript解析后构建DOM树、CSSOM树和JavaScript线程，然后将它们合成为渲染树（Render Tree），最后利用渲染树进行页面的渲染展示。
+7. 页面加载：随着页面的渲染，浏览器会逐步加载页面中引用的资源，如图片、样式表、脚本等。这些资源的加载过程可能会触发新的HTTP请求。
+8. 页面完成：当所有的资源加载完成后，页面就算加载完成了，用户可以与页面进行交互了。
+
+# 二、html
+
+## 1.src和href的区别
+
+`src`和`href`都是代表引用外部的资源，**最大的区别就是src会阻塞后续代码的解析，href的加载与后续代码的解析是并行的**。
+
+**src**：表示对资源的引用，他指向的内容会嵌入到当前标签所在的位置，src会对目标url发送请求下载并应用到文档中。
+
+**href：** 表示超文本引用，它指向一些网络资源，建立和当前元素或本文档的链接关系。当浏览器识别到它他指向的⽂件时，就会并⾏下载资源，不会停⽌对当前⽂档的处理。 常用在a、link等标签上。
+
+## 2.defer和async
+
+​	这两个是`script`标签独有的两个属性，他们异步的加载脚本资源而不阻塞浏览器对后续代码的解析。
+
+**defer**：html解析到script标签时会异步加载该脚本，等到html解析完成后才执行该脚本代码
+
+**async**：html解析到script标签时会异步加载该脚本，但网络请求加载完成后会立即执行脚本代码，可能会出现浏览器未解析完html就执行了脚本代码。
+
+**默认**：html解析到该script时，会同步加载脚本资源，加载完成后会立即执行脚本代码。注意，这一过程都是同步在进行的，所以会阻塞浏览器解析后续html字符串。
+
+## 3.HTML5新增
+
+1.语义化标签
+
+2.表单属性更新，type支持email、time、range等等值，placeholder、autofocus、requierd等属性
+
+3.Web Storage：新增session和local存储
+
+4.新增标签：canvas、audio、video、sourse
+
+5.拖放API
+
+## 4.DOCTYPE的作用
+
+​	声明文档的类型，告诉浏览器以何种标准来解析该文档。
+
+# 三、css
+## 1.BFC
+
+​	BFC块级格式化上下文，**BFC是一个独立的空间，让空间内部的子元素不会影响到外部的布局，外部的布局也不会影响BFC内部子容器的布局**
+
+### 触发BFC
+
+触发`BFC`的条件包含不限于：
+
+- 根元素，即HTML元素
+- 浮动元素：float值为left、right
+- overflow值不为 visible，为 auto、scroll、hidden
+- display的值为inline-block、inltable-cell、table-caption、table、inline-table、flex、inline-flex、grid、inline-grid
+- position的值为absolute或fixed
+
+### BFC的规则
+
+1.`BFC`就是一个块级元素，块级元素会在垂直方向一个接一个的排列
+
+2.`BFC`就是页面中的一个隔离的独立容器，容器里的标签不会影响到外部标签
+
+3.垂直方向的距离由`margin`决定， 属于同一个`BFC`的两个相邻的标签外边距会发生重叠
+
+4.计算`BFC`的高度时，浮动元素也参与计算
+
+### BFC解决的问题
+
+#### 1.解决margin重叠
+
+在同一个bfc容器下，其子元素的margin会被重叠。这种的结果就是box1和box2的外边距发生了重叠
+
+```html
+   <style>
+      * {
+        margin: 0;
+        padding: 0;
+      }
+      .box {
+        margin: 0px;
+        width: 100px;
+        height: 100px;
+        background: red;
+      }
+      .box:nth-of-type(1) {
+        margin-bottom: 10px;
+      }
+      .box:nth-of-type(2) {
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="box"></div>
+      <div class="box"></div>
+    </div>
+  </body>
+```
+
+解决方法就是让某个元素成为一个BFC容器的子元素，这样就不会发生重叠了。
+
+```html
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+      }
+      .box {
+        margin: 0px;
+        width: 100px;
+        height: 100px;
+        background: red;
+      }
+      .container>.box{
+        margin-bottom: 10px;
+      }
+      .bfc>.box{
+        margin-top: 10px;
+      }
+      .bfc{
+        display: flex;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="box"></div>
+      <div class="bfc">
+        <div class="box"></div>
+      </div>
+    </div>
+  </body>
+```
+
+#### 2.高度塌陷
+
+​	当父容器中所有的子容器都设置了浮动脱离了文档流，则父元素就因为没有子元素在文档流中撑起高度而塌陷为0px，使用bfc的特性**bfc容器的高度会计算设置了float的后代元素的高度**，从而让父元素的高度被撑开。
+
+下列的结果就是.fa容器的高度会因为子元素脱离了文档流而塌陷
+
+```html
+ <style>
+    .fa{
+      width: 200px;
+      background-color: red;
+    }
+    .son{
+      height: 150px;
+      width: 150px;
+      float: left;
+      background-color: skyblue;
+    }
+  </style>
+</head>
+<body>
+  <div class="fa">
+    <div class="son"></div>
+  </div>
+</body>
+```
+
+使用bfc的特性，在计算父元素高度时会计算子元素的高度
+
+```html
+ <style>
+    .fa{
+      width: 200px;
+      display: flex;
+      background-color: red;
+    }
+    .son{
+      height: 150px;
+      width: 150px;
+      float: left;
+      background-color: skyblue;
+    }
+  </style>
+</head>
+<body>
+  <div class="fa">
+    <div class="son"></div>
+  </div>
+</body>
+```
+
+## 2.margin、padding取值问题
+
+​	margin：1px 2px 3px 4px 则结果为：上1px，右边2px，下3px，左4px
+
+​	margin：1px 2px 4px 则结果为：上1px、下4px，左右2px。
 
 
 
-# JS
+# 四、JS
 ## bind、call、apply
   这三个方法都是修改函数执行时的this指向，call、apply都是立即调用函数，而bind是创建一个this指向被修改了的函数。call、apply的唯一区别就是传参方式不同而已。
-  
+
  ### call
   在调用myCall时，this其实就是调用函数的那个对象，也就是目标函数。通过this指向始终都是最后调用该方法的那个对象的特性，给对象添加一个方法，最终调用该方法时this指向就是这个对象了。注意调用时不要把参数忘记了，用剩余参数来接受参数列表时获取到的是一个数组，在调用时通过展开运算符将其展开即可依次传入参数了，在调用函数后，通过delete删除改方法。
 
@@ -164,7 +478,7 @@ function deepCopy (obj) {
   }
 }
 
-```
+ ```
 
 ## 原型
   原型包括了原型链，构造函数，原型对象，实例
@@ -191,42 +505,16 @@ function deepCopy (obj) {
     // 对象的原型对象的原型为null
     console.log(Object.prototype.__proto__ === null);
   ```
-## 手写New
-  首先要明白new操作符做了那些事情:
-  1.创建一个对象
-  2.让该对象的隐式原型设置为函数的显示原型，实现继承，可以通过原型链访问基类的所有属性和方法
-  3.调用修改了this指向的构造函数，让实例初始化属性
-  4.返回这个对象
-  ```ts
-    /**
-     * @param {Function} cb
-     * @param {any[]} args 
-     * */
-    function myNew (cb, ...args) {
-      // 创建一个对象
-      const obj = new Object()
-      // 让该对象的隐式原型指向函数的显示原型，这样对象就能拥有原型链上的所有方法和属性（实现继承）
-      obj.__proto__ = cb.prototype
-      // 调用构造函数，并是构造函数在指向时，其this指向当前的新对象
-      cb.call(obj, ...args)
-      // 返回该对象
-      return obj
-    }
-    
-    function Person (name, age) {
-      this.name = name
-      this.age = age
-    }
 
-    const p = myNew(Person, 'Mark', 18)
-    console.log(p);
-  ```
 
   ## 作用域
+
   作用域有：全局作用域、函数作用域、块级作用域
   全局作用域：无论在哪儿都能访问其声明的变量
   函数作用域：在函数执行时，才能访问其声明的变量
-  块级作用域：在花括号内部，才能访问其声明的变量
+  块级作用域：在花括号内部，才能访问其声明的变量,var除外
+
+**作用域链**：在当前作用域无法找到该变量时，会向父级作用域寻找变量，若父级作用域没有则向更层的祖先级作用域寻找该变量，直到全局作用域，整个过程就是作用域链，若还是没找到就会报错。
 
   ```ts
     // 全局作用域，所有作用域都能访问
@@ -257,7 +545,7 @@ function deepCopy (obj) {
   #### cors
 
   #### 代理服务器
-  
+
   #### JSONP
  jsonp就是通过浏览器加载脚本文件时，不会因为跨域而受到影响，通过下列操作即可完成一次jsonp技术解决请求跨域问题
  1.前端定义一个请求成功的函数，然后在特定时刻创建script标签，并指定请求路径src，将script标签添加到DOM中，浏览器会通过src自动发请求获取资源内容。
@@ -575,8 +863,7 @@ onMounted(() => {
 }
 </style>
   ```
-## 重排、重绘
-https://www.cnblogs.com/xiahj/p/11777786.html
+
 
 ## typeof instanceof
 
@@ -683,15 +970,60 @@ Number对于基本数据类型的转换严格，对于引用类型的数据会�
     }
     fun()
   ```
+例3:
+
+```js
+function outer() {
+  var a = 5
+  function inner() {
+    // 为啥是undefined，因为var声明的变量会被提示到作用域顶部
+    // 由于a已经声明了，所以不会通过作用域链访问外层的a
+    console.log(a) // undefined
+    var a = 10
+    console.log(a) // 10
+  }
+  return inner
+}
+outer()()
+// 上面的outerr等同于下面的效果
+function outer01() {
+  var a = 5
+  function inner01() {
+    var a
+    console.log(a)
+    a = 10
+    console.log(a)
+  }
+}
+
+```
+
+
+
 ### const
+
   声明一个常量，初始化时必须声明其值，且值不允许被修改。
 ### let
   声明一个变量。变量只会在当前作用域中生效。
 
 ### 区别
-**提升**:var声明的变量可以在声明前访问，不过都是undefined
-**作用域**:var不存在块级作用域
-**重复声明**:var允许同作用域重复声明，let、const不允许在同一作用域下重复声明
+**提升**
+
+var声明的变量可以在声明前访问，不过都是undefined
+**作用域**
+
+var不存在块级作用域
+**重复声明**
+
+var允许同作用域重复声明，let、const不允许在同一作用域下重复声明
+
+**暂时性死区**：
+
+​	var变量可以在未被初始化时访问，let、const只有在变量声明后才能使用
+
+**赋值：**
+
+​	const初始化后就不能被重新赋值了
 
 ## 强弱类型、静态动态类型
 ### 强类型
@@ -780,3 +1112,330 @@ Number对于基本数据类型的转换严格，对于引用类型的数据会�
     console.log('script');
   </script>
 ```
+
+## 异步同步
+
+​	同步：同步任务是只要发布了该任务，立马去执行。
+
+​	异步：异步任务是**指无法立即去执行的任务**，要满足一定条件才回去执行，例如网络请求完成后执行的操作，元素的事件监听处理函数，计时器、延时器...
+
+为什么会有异步？因为让浏览器主线程遇到这些异步操作时一直等待他们完成再执行后续操作，就会导致后续代码被阻塞，浏览器卡死（**因为浏览器渲染主线程要渲染页面、执行JS**），有了异步，浏览器渲染主线程才不会被阻塞。
+
+### JS会阻塞渲染
+
+​	为什么？因为JS和渲染是在一个进程中处理的（**必须等待上一个任务完成才能执行下一个任务**）。在执行回调时由于JS代码执行的是同步的，需要等待回调执行完成才能执行渲染任务（重排重绘）
+
+```html
+    <button>哈哈</button>
+    <script>
+      const button = document.querySelector('button')
+      function delay(delay) {
+        const currentTime = Date.now()
+        for (; Date.now() - currentTime < delay; ) {}
+      }
+      button.addEventListener('click',()=>{
+        button.innerText='ha ha'
+        delay(3000)
+      })
+    </script>
+```
+
+## 执行上下文
+
+在代码执行时会生成执行上下文，执行上下文中包含了：**定义的变量**、**this**、**作用域链**等。
+
+执行上下文分为：
+
+全局执行上下文：当前运行的网页中只存在一个全局执行上下文，根据寄生环境不同this执行不同。
+
+函数执行上下文：在函数执行时会生成的执行上下文
+
+### 执行上下文栈
+
+js通过执行上下文栈来管理所有的执行上下文，在程序一个开始时就会有一个全局执行上下文被压入到栈中，每次函数执行就会生成一个新的执行上下文被压入栈中，当函数执行完成时就会被弹出栈。
+
+### 创建执行上下文
+
+在执行某个函数或程序时，需要先解析代码，解析的时候会根据不同的位置创建不同的上下文（全局、函数），将变量赋值为undefined，将函数声明了，才正式执行程序。
+
+上下文类型决定了创建了不同的数据：
+
+- 全局上下文：变量定义，函数声明
+- 函数上下文：变量定义，函数声明，`this`，`arguments`
+
+### this
+
+​	this是执行上下文中的一个对象，this带至调用该函数的对象。根据调用者的不同其this指向也不同。若是对象调用方法的则this就指向最后调用该方法的这个对象，是全局执行的该函数，则this指向全局window。
+
+## 异步函数
+
+​	通过async来声明一个异步函数，异步函数执行完成时返回一个Promise成功的Promise对象
+
+## 手写专区
+
+### instanceof
+
+```ts
+function MyInstanceof(obj, constructor) {
+  let flag = false
+  if (obj.__proto__ === constructor.prototype) {
+    // 若当前对象隐式原型就是构造函数的显示原型时
+    flag = true
+  } else if (obj.__proto__ !== null) {
+    // 若当前对象还有隐式原型时
+    flag = MyInstanceof(obj.__proto__, constructor)
+  } else {
+    // 对象的原型的原型为null
+    return false
+  }
+  return flag
+}
+
+console.log(MyInstanceof([], Object))
+
+```
+
+### New
+
+  首先要明白new操作符做了那些事情:
+  1.创建一个对象
+  2.让该对象的隐式原型设置为函数的显示原型，实现继承，可以通过原型链访问基类的所有属性和方法
+  3.调用修改了this指向的构造函数，让实例初始化属性
+  4.返回这个对象
+
+  ```ts
+    /**
+     * @param {Function} cb
+     * @param {any[]} args 
+     * */
+    function myNew (cb, ...args) {
+      // 创建一个对象
+      const obj = new Object()
+      // 让该对象的隐式原型指向函数的显示原型，这样对象就能拥有原型链上的所有方法和属性（实现继承）
+      obj.__proto__ = cb.prototype
+      // 调用构造函数，并是构造函数在指向时，其this指向当前的新对象
+      cb.call(obj, ...args)
+      // 返回该对象
+      return obj
+    }
+    
+    function Person (name, age) {
+      this.name = name
+      this.age = age
+    }
+
+    const p = myNew(Person, 'Mark', 18)
+    console.log(p);
+  ```
+
+### 深浅拷贝
+
+​	深浅拷贝主要区别就是有没有在堆区中开辟内存区域、相同的两个变量引用的同一个对象。
+
+### 数组的方法
+
+```ts
+// forEach every some reduce map filter
+// 遍历数组，调用回调
+Array.prototype._forEach = function (cb) {
+  for (let i = 0; i < this.length; i++) {
+    cb(this[i], i, this)
+  }
+}
+// 遍历数组，回调中某一次返回布尔值真结束循环（数组中是否有某个元素满足其条件）
+Array.prototype._some = function (cb) {
+  let flag = false
+  for (let i = 0; i < this.length; i++) {
+    const _flag = cb(this[i], i, this)
+    if (_flag) {
+      flag = true
+      break
+    }
+  }
+  return flag
+}
+// 遍历数组，回调都返回真返回真（数组中是否每个元素都满足了某种条件）
+Array.prototype._every = function (cb) {
+  let i = 0
+  for (; i < this.length; i++) {
+    const flag = cb(this[i], i, this)
+    if (!flag) {
+      break
+    }
+  }
+  return i === this.length
+}
+// 遍历数组，将满足条件的元素过滤出来成一个新数组
+Array.prototype._filter = function (cb) {
+  const arr = []
+  for (let i = 0; i < this.length; i++) {
+    const flag = cb(this[i], i, this)
+    if (flag) {
+      arr.push(this[i])
+    }
+  }
+  return arr
+}
+// 遍历数组，计算出一个结果
+Array.prototype._reduce = function (cb, sum = 0) {
+  for (let i = 0; i < this.length; i++) {
+    const res = cb(sum, this[i], i, this)
+    sum = res
+  }
+  return sum
+}
+// 遍历数组，返回一个新数组
+Array.prototype._map = function (cb) {
+  const arr = []
+  for (let index = 0; index < this.length; index++) {
+    const res = cb(this[index], index, this)
+    arr.push(res)
+  }
+  return arr
+}
+```
+
+### 消息订阅模式
+
+```ts
+/**
+ * 非单例的PubSub
+ */
+export class Pubsub {
+  private channels: {
+    [propsName: string]: Function[]
+  }
+  constructor() {
+    this.channels = {}
+  }
+  /**
+   * 发布消息
+   * @param token 消息id 
+   * @param args 消息发出时的参数
+   */
+  emit(token: string, ...args: any[]) {
+    const channel = Reflect.get(this.channels, token)
+    if (channel === undefined) {
+      // 没有该频道，创建该频道
+      this.channels[token] = []
+    } else {
+      // 有该频道，通知所有订阅者
+      channel.forEach(cb => cb(...args))
+    }
+  }
+  /**
+   * 订阅频道
+   * @param token 频道id
+   * @param cb 频道更新后的回调
+   */
+  on(token: string, cb: Function) {
+    const channel = Reflect.get(this.channels, token)
+    if (channel === undefined) {
+      // 无该频道 创建频道，并添加订阅者
+      this.channels[token] = [cb]
+    } else {
+      // 保存订阅者的回调
+      channel.push(cb)
+    }
+  }
+  /**
+   * 移除订阅
+   * @param token 频道id 
+   * @param cb 回调
+   */
+  remove(token: string, cb: Function) {
+    const channel = Reflect.get(this.channels, token)
+    if (channel) {
+      const index = channel.findIndex(ele => ele === cb)
+      channel.splice(index, 1)
+    } else {
+      throw new Error('无该频道:' + token)
+    }
+  }
+  // 移除频道
+  // 清空订阅者
+}
+
+export default new Pubsub()
+```
+
+### Promise.all
+
+```ts
+/**
+ * Promise.all
+ * @param {Promise[]} array
+ * @returns {Promise}
+ */
+Promise._all = function (array) {
+  return new Promise((resolve, reject) => {
+    // 结束的个数
+    let downCount = 0
+    // 遍历每一个Promise对象，捕获他们的失败和成功
+    for (let i = 0; i < array.length; i++) {
+      array[i]
+        .then(() => {
+          // 每次成功都让结束的个数+1
+          downCount++
+          if (downCount === array.length) {
+            // 若结束的个数等于数组长度，就凝固promise
+            resolve()
+          }
+        })
+        .catch(() => {
+          // 只要有一个失败了，整个all都失败
+          reject()
+        })
+    }
+  })
+}
+
+const arr = [1, 2, 3]
+
+Promise._all(
+  arr.map(async (ele, index) => {
+    return new Promise((r) => {
+      setTimeout(() => {
+        console.log(ele)
+        r()
+      }, ele * 1000)
+    })
+  })
+).then(() => {
+  console.log('完成')
+})
+
+```
+
+### Promise.race
+
+```ts
+/**
+ * Promise.race
+ * @param {Promise[]} array
+ */
+Promise._race = function (array) {
+  return new Promise((resolve, reject) => {
+    for (let i = 0; i < array.length; i++) {
+      array[i].then(() => resolve()).catch(() => reject())
+    }
+  })
+}
+
+const arr = [1, 2, 3]
+
+Promise._race(
+  arr.map((ele) => {
+    return new Promise((r) => {
+      setTimeout(() => {
+        console.log(ele);
+        r()
+      }, ele * 1000)
+    })
+  })
+).then(() => {
+  console.log('ok')
+})
+
+```
+
