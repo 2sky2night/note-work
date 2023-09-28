@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      .box1,
+      .box2 {
+        width: 100px;
+        height: 100px;
+        position: relative;
+      }
+      .son-2 {
+        width: 80px;
+        height: 80px;
+        /* position: relative; */
+        background-color: aqua;
+        /* z-index: 0; */
+      }
+      .box1 {
+        z-index: 10;
+        background-color: red;
+      }
+      .box2 {
+        /* z-index:0; */
+        top: -50px;
+        left: 50px;
+        background-color: yellow;
+      }
+      .grand-2{
+        position: relative;
+        z-index: 100;
+        width: 30px;
+        height: 30px;
+        background-color:green;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="box1"></div>
+    <div class="box2">
+      <div class="son-2">
+        <div class="grand-2"></div>
+      </div>
+    </div>
+  </body>
+</html>

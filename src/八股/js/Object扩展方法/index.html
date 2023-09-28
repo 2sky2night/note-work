@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script>
+      const obj = { name: 'Mark', age: 18 }
+      const obj_seal = Object.seal(obj) // 返回原始对象
+      console.log(obj === obj_seal)
+      obj.money = 200
+      console.log(obj.money) // undefined
+      obj.age = 20
+      console.log(obj.age) // 20
+      delete obj.age // 删除属性age无效
+      console.log(obj.age) // 20
+    </script>
+  </body>
+</html>

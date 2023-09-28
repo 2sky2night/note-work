@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <button>执行一段长时间阻塞主线程的代码</button>
+    <input />
+    <script>
+      const btn = document.querySelector('button')
+
+      function fun(time) {
+        const now = Date.now()
+        while (Date.now() - now <= time) {}
+      }
+
+      function webworker() {
+        const worker = new Worker('01.js')
+        worker.onmessage=(e)=>{
+          console.log(e.data);
+          worker.terminate()
+        }
+      }
+
+      btn.onclick = () => {
+        // sync
+        // fun(500)
+        // webworker
+        webworker()
+      }
+
+      // 实例代码
+      // const wb = new Worker('index.js')
+      // wb.onmessage = (data) => {
+      //   console.log('接受子线程消息:' + data.data)
+      //   console.log(window.a);
+      // }
+      // setTimeout(() => {
+      //   wb.postMessage('hello~')
+      // }, 1000)
+    </script>
+  </body>
+</html>

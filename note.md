@@ -30,15 +30,57 @@
 
 3.处理CSS，将CSS解析成CSSOM树
 
-4.在解析过程中可能会出现需要加载的外部资源，浏览器会发送请求加载外部资源，若资源是同步加载的可能会出现阻塞浏览器渲染线程的情况。
+4.在解析过程中可能会出现需要加载的外部资源，浏览器会发送请求加载外部资源，**若资源是同步加载的可能(CSS、JS)**会出现阻塞浏览器渲染线程的情况。
 
 5.解析HTML字符串完成后，将DOM树与CSSOM树合并成渲染树
 
 6.通过GPU将渲染树渲染到页面中。
 
+### load和DOMContentload
+
+load事件浏览器渲染页面完成时触发。
+
+DOMContentLoaded事件是在DOM树构建完成后触发。
+
+DOMContentLoaded事件是在DOM树构建完成后触发，即HTML解析完成并生成DOM树，但是CSS、JavaScript、图片等外部资源可能还在加载中。而load事件是在页面所有资源（包括CSS、JavaScript、图片等）加载完成后触发，表示整个页面已完全加载。
+
+load事件是在浏览器完全加载页面（包括所有资源如图片、样式表、脚本等）后触发。这意味着浏览器已经解析完HTML，生成了DOM树，并完成了DOM树的构建、样式计算、布局和绘制等过程。
+
+而DOMContentLoaded事件是在浏览器解析完HTML文档并构建了DOM树后触发。此时，浏览器已经完成了DOM树的构建，但可能尚未加载完所有资源（如图片、样式表、脚本等），因此可能还没有完成页面的完全渲染。DOMContentLoaded事件的触发时机通常在load事件之前，所以它可以用于在页面加载过程中执行一些初始化操作，而无需等待所有资源加载完毕。
+
+总结一下，load事件在页面加载完毕后触发，而DOMContentLoaded事件在DOM树构建完成后触发。
+
+### 解决加载CSS和JS阻塞浏览器解析html
+
+#### CSS
+
+##### 阻塞的原因
+
+外联样式表link不会阻塞DOM树构成，但会阻塞浏览器渲染过程。
+
+CSS不会阻塞浏览器解析html生成DOM树，但是在css加载完成前会阻塞CSSOM树，由于CSSOM树构建被阻塞，无法创建渲染树，从而阻塞渲染树的构建，所以CSS还是会阻塞浏览器渲染页面。
+
+放在头部可以尽早请求CSS资源，如果将 CSS 放在页面中间或者底部，CSS 不会阻塞 DOM 构建，已经解析完成的内容会被渲染出来。
+
+这时一旦 CSS 加载完成页面则会重新渲染，可能造成页面变化。一方面不必要的重新渲染造成额外的性能负担，另一方面页面的变化体验也非常不好。
+
+#### JS
+
+##### 阻塞的原因
+
+script标签在被解析时会自动发送http请求加载外部脚本资源，若无async、defer属性，则会阻塞浏览器解析后续代码，因为浏览器会等待加载资源成功并执行脚本资源后才会向下解析html。
+
+##### 解决方法
+
+使用async、defer异步加载脚本资源的方式可以解决阻塞问题。
+
+async异步加载(可能会阻塞)：当加载外部脚本资源时会发送请求，且并发解析后续html，当外部脚本资源请求完成时，会立即执行脚本代码，若在请求完成时，浏览器还未解析完html，会因为执行外部脚本代码而阻塞解析。
+
+defer延迟加载：当加载外部脚本资源时会发送请求，且并发解析后续html，当请求完成后，不会执行代码直到浏览器把全部html解析完成后，再去执行代码。
+
 ## 2.重排重绘
 
-​	重排重绘是浏览器渲染过程的机制。
+​	重排或回流（reflow）、重绘（repaint）是浏览器渲染过程的机制。
 
 ### 重绘
 
@@ -109,17 +151,19 @@
 
 1.浏览器根据请求的URL交给DNS域名解析，找到真实的IP
 
-2.建立TCP连接，确认双方是否有能力接收和发起请求，通过则向服务器发送请求。
+2.建立TCP连接，三次握手，确认双方是否有能力接收和发起请求，通过则向服务器发送请求。
 
-3.服务器接收到请求后，根据请求头部以及请求体相关信息，去执行相应业务逻辑，处理好后，将html字符串相应给浏览器
+3.服务器接收到请求后，根据请求头部以及请求体相关信息，去执行相应业务逻辑，处理好后，将html字符串相应给浏览器。
 
-4.浏览器将响应回来的html字符串进行解析。在解析的过程会逐行读取HTML代码，将html解析成DOM tree ，将css解析成 CSSOM tree
+4.请求完成后TCP断开连接，四次挥手
 
-5.在触发解析HTML字符串可能会需要加载外部资源，会发送新的http请求，若是同步加载可能会被阻塞渲染进程。
+5.浏览器将响应回来的html字符串进行解析。在解析的过程会逐行读取HTML代码，将html解析成DOM tree ，将css解析成 CSSOM tree
 
-6.解析完成后，将CSSOM tree和DOM tree 合并成渲染树
+6.在触发解析HTML字符串可能会需要加载外部资源，会发送新的http请求，若是同步加载可能会被阻塞渲染进程。
 
-7.将渲染树通过GPU处理，渲染出页面。
+7.解析完成后，将CSSOM tree和DOM tree 合并成渲染树
+
+8.将渲染树通过GPU处理，渲染出页面。
 
 ### 详细
 
@@ -131,6 +175,110 @@
 6. 浏览器渲染：当浏览器接收到服务器发送的响应数据后，会根据响应的内容进行解析和渲染。浏览器将HTML、CSS和JavaScript解析后构建DOM树、CSSOM树和JavaScript线程，然后将它们合成为渲染树（Render Tree），最后利用渲染树进行页面的渲染展示。
 7. 页面加载：随着页面的渲染，浏览器会逐步加载页面中引用的资源，如图片、样式表、脚本等。这些资源的加载过程可能会触发新的HTTP请求。
 8. 页面完成：当所有的资源加载完成后，页面就算加载完成了，用户可以与页面进行交互了。
+
+## 4.浏览器缓存机制
+
+https://juejin.cn/post/7178794675044614203#heading-2
+
+​	浏览器缓存：浏览器将用户请求过的资源（html、js、css、资源）存储到内存（`memeory cache`）、磁盘(`disk cache`)中，当用户再一次加载这些内容时，浏览器可以直接将本地的内容加载出来，从而节省用户流量、减少服务器性能开销，是性能优化的手段之一。
+
+​	例如：文档加载了Vue.js脚本资源，这种资源一般不会更新，完全没必要每次请求都重新加载。我们可以将其设置为缓存，这样，下次加载Vue.js就不会发送请求而是命中缓存获取缓存中的文件来加载资源。
+
+​	缓存的缺点：若站点内容更新了，浏览器却还是根据缓存命中得到旧站点的内容，就会导致**请求的内容**和**实际内容**不一致的情况。
+
+### 缓存资源流程
+
+​	当浏览器发送请求时首先会从本地缓存数据库发送请求获取资源，若缓存中没有数据就会向服务器发送请求获取资源。若服务器响应的报文规定了缓存以及缓存规则，浏览器会将数据保存在本地缓存数据库中，下一次发送请求可能就会命中了。
+
+​	资源缓存都是通过一定**规则**来约束了缓存资源的访问流程。
+
+​	js、css、图片等资源可以使用强缓存轻松利用缓存机制减少开销，但html文档缓存建议使用协商缓存，通过检查文件是否修改决定是否复用资源结果。
+
+### HTTP缓存规则
+
+​	有强缓存和对比缓存（协商缓存）规则等
+
+#### 强缓存
+
+​	强制缓存如果生效，不需要再和服务器发生交互。
+
+响应头中一定有`cache-control`或`expires`属性。 其http的状态码返回：`Status Code: 200  (from disk cache)`，说明强制缓存已被命中使用。
+
+##### Cache-Control 
+
+是 HTTP1.1 中控制网页缓存的字段，主要取值为：
+
+- public：资源客户端和服务器都可以缓存
+- privite：资源只有客户端可以缓存
+- no-cache：客户端缓存资源，但是是否缓存需要经过协商缓存来验证
+- no-store：不使用缓存
+- max-age：缓存保质期，是相对时间
+
+##### Expires
+
+是HTTP1.0控制网页缓存的字段，值为一个时间戳，服务器返回该资源缓存的到期时间。
+
+`Expires`为服务端返回的到期时间。即下一次请求时，请求时间`小于`服务端返回的到期时间，直接使用缓存数据。作为HTTP 1.0的作品，所以它基本可以忽略。
+
+但 Expires 有个缺点，就是它判断是否过期是用本地时间来判断的，本地时间是可以自己修改的。
+
+##### 强制缓存命中原则
+
+当一个资源被缓存后，浏览器重新加载该资源时：
+
+- 首先查看资源是否过期，过期了直接发送网络请求。
+- 若资源未过期，会从内存中寻找，若内存有浏览器会直接加载
+- 若内存中没有，浏览器会向磁盘中找，有就直接加载
+- 若磁盘中也没有，浏览器会发送网络请求重新加载资源
+
+##### 响应头部设置强缓存
+
+​	通过响应头部设置强缓存可以在过期时间前，复用该资源结果，减少客户端和服务端的开销。	
+
+```js
+ if (req.url.includes('.js') || req.url.includes('.css')) {
+     const data = await getStrStatic(`/client/${req.url}`)
+     res.setHeader('Cache-Control', 'max-age=100') // 设置缓存有效期为100s
+     res.end(data)
+ }
+```
+
+
+
+#### 对比缓存（协商缓存）
+
+​	**对比缓存不管是否生效，都需要与服务端发生交互。**因为服务端需要通过标识来通知浏览器是否需要使用缓存。
+
+协商缓存是通过请求头`Last-Modified`或`Etag`来实现的，任意选择其中一个即可。`Last-Modified` 标识的是文档最后修改时间，`Etag` 是以文档内容来进行编码的。
+
+触发条件：
+
+- Cache-Control 的值为 no-cache （协商缓存）
+- 或者 Cache-Control: max-age=0
+
+##### last-modified
+
+​	简单来说就是通过第一次请求时浏览器保存资源最后修改时间，后面浏览器再次发送请求时携带上该信息，服务端通过请求头部的信息与资源最后修改时间进行对比，若无变化缓存命中，若有变化缓存不命中，返回最新信息。
+
+流程：
+
+1. 服务器第一次响应请求时，告诉浏览器资源的最后修改时间，并存储到浏览器端。
+
+2. 再次请求时，请求头中携带`If-Modified-Since`字段，将上次请求服务器资源的最后修改时间传到服务器与被请求资源的最后修改时间进行比对。
+
+3. 若资源的最后修改时间大于If-Modified-Since的值，说明资源又被改动过，则响应整片资源内容，返回状态码200。
+
+4. 若资源的最后修改时间小于或等于If-Modified-Since，说明资源无新修改，则响应HTTP 304，告知浏览器继续使用所保存的cache。
+
+##### etag
+
+服务器资源是否被修改的唯一标志。首次请求唯一标志被存到客户端缓存数据库。
+
+客户端再次请求时，请求头中携带`If-None-Match`字段。服务端则将与被请求资源的唯一标识进行比对
+
+若不同，说明资源又被改动过，则响应整片资源内容，返回状态码200；
+
+若相同，说明资源没有被改动过，则响应HTTP 304，告知浏览器继续使用所保存的cache。
 
 # 二、html
 
@@ -146,7 +294,7 @@
 
 ​	这两个是`script`标签独有的两个属性，他们异步的加载脚本资源而不阻塞浏览器对后续代码的解析。
 
-**defer**：html解析到script标签时会异步加载该脚本，等到html解析完成后才执行该脚本代码
+**defer**：html解析到script标签时会异步加载该脚本，等到html解析完成后才执行该脚本代码。在DOMContentload事件之前执行，对于defer的脚本资源的执行，所有的脚本代码执行完成后触发DOMContentloaded之前事件。多个defer按照处于文档的顺序来加载。
 
 **async**：html解析到script标签时会异步加载该脚本，但网络请求加载完成后会立即执行脚本代码，可能会出现浏览器未解析完html就执行了脚本代码。
 
@@ -168,6 +316,8 @@
 
 ​	声明文档的类型，告诉浏览器以何种标准来解析该文档。
 
+## 5.前端性能优化
+
 # 三、css
 ## 1.BFC
 
@@ -179,7 +329,7 @@
 
 - 根元素，即HTML元素
 - 浮动元素：float值为left、right
-- overflow值不为 visible，为 auto、scroll、hidden
+- **overflow值不为 visible**，为 auto、scroll、hidden
 - display的值为inline-block、inltable-cell、table-caption、table、inline-table、flex、inline-flex、grid、inline-grid
 - position的值为absolute或fixed
 
@@ -189,7 +339,7 @@
 
 2.`BFC`就是页面中的一个隔离的独立容器，容器里的标签不会影响到外部标签
 
-3.垂直方向的距离由`margin`决定， 属于同一个`BFC`的两个相邻的标签外边距会发生重叠
+3.同一个BFC下，两个元素的margin可能会发生重叠，与方向无关
 
 4.计算`BFC`的高度时，浮动元素也参与计算
 
@@ -319,9 +469,179 @@
 
 ​	margin：1px 2px 4px 则结果为：上1px、下4px，左右2px。
 
+## 3.层叠上下文
 
+​	层叠上下文规定了每个元素之间的显示顺序和覆盖关系。	
+
+ 	层叠上下文管理了元素之间层叠的关系。每个层叠上下文相关css属性来触发层叠上下文，这些css属性决定了每个层叠上下文的显示顺序和覆盖关系。
+
+### 触发方式
+
+1.根标签html就是一个层叠上下文（文档流）
+
+2.z-index+position：**当元素的z-index属性值不为auto时且position不为static时**，会创建一个新的层叠上下文。
+
+3.CSS3属性：opacity、transform、filter等属性都会创建元素的上下文。
+
+**注意**：z-index：auto不会创建新的层叠上下文!!!!且z-index:0
+
+### 作用
+
+1.隔离元素：在某个层叠上下文中的所有元素都不会响应其他层叠上下文的布局。
+
+2.控制元素的层叠顺序：通过z-index可以控制元素的z轴，控制同一个层叠上下文中元素的覆盖关系，z-index大的覆盖z-index小的。**非同一个层叠上下文是无法响应其他层叠上下文元素的覆盖关系的!**
+
+3.形成层叠上下文根：让一个元素成为层叠上下文，其后代元素都在该层叠上下文中设置显示，后代元素都会覆盖该元素显示。
+
+### 思考题01
+
+box1、box2、son2的覆盖顺序？
+
+```html
+  <div class="box1"></div>
+  <div class="box2">
+    <div class="son2"></div>
+  </div>
+```
+
+
+```css
+   div {
+        width: 100px;
+        height: 100px;
+      }
+      .box1 {
+        background-color: red;
+        z-index: 2;
+        position: relative;
+        top: 20px;
+        left: 20px;
+      }
+      .box2 {
+        position: relative;
+        z-index: 1;
+        background-color: greenyellow;
+      }
+      .son2 {
+        background-color: blue;
+        width: 50px;
+        height: 50px;
+        position: absolute;
+        z-index: 999;
+      }
+```
+
+答案：box2、son2、box1
+
+为什么`son2`明明是`z-index:999`但是无法覆盖`box2`的`z-index:2`呢？
+
+这就是因为隔离性，让后代元素都在一个层叠上下文中设置覆盖关系，不会响应到其他层叠上下文中的布局。
+
+**因为box1、box2都在html根层叠上下文中布局**，他们在同一个层叠上下文中，box1的z-index=2，box2的z-index=1，所以**决定了box1覆盖了box2**。box2中的son2在box2创建的层叠上下文中布局的，由于**隔离性**，box2中后代元素的z-index无法影响其他层叠上下文的显示关系。
+
+如何让son2覆盖box1呢？那么就只需要让box1和son1处于同一个层叠上下文即可，**因为在同一个层叠上下文下通过z-index决定了元素的覆盖关系**。所以只需要让box1取消层叠上下文，将定位设置为auto或static即可。
+
+### 思考题02
+
+```css
+      .box1,
+      .box2 {
+        width: 100px;
+        height: 100px;
+        position: relative;
+      }
+      .son-2 {
+        top:30px;
+        width: 80px;
+        height: 80px;
+        background-color: aqua;
+        position: absolute;
+        z-index: 99999;
+      }
+      .box1 {
+        z-index: 10;
+        background-color: red;
+      }
+      .box2 {
+        /*z-index：auto,auto是默认值，不会创建新的层叠上下文，所以son-2属于根层叠上下文里面的*/
+        z-index:auto;
+        top: -50px;
+        left: 50px;
+        background-color: yellow;
+      }
+```
+
+```html
+    <div class="box1"></div>
+    <div class="box2">
+      <div class="son-2"></div>
+    </div>
+```
+
+box1、box2、son-2的覆盖关系？
+
+son-2、box1、box2。
+
+为什么son-2覆盖了box1？
+
+> box1、box2都是属于根层叠上下文的所以他们的覆盖关系通过z-index决定，由于box2是z-index：auto（默认值），则相当于z-index：0，所以box1在box2上。
+**疑点:**为什么son-2会影响外部的布局呢，明明son-2属于box2创建的层叠上下文中的，son-2的覆盖关系不应该影响外部容器的。
+**关键:**`在于z-index的默认值auto其作用是不创建层叠上下文并将z-index：0`。由于z-index:auto不会创建新的层叠上下文则会导致son-2是属于根层叠上下文的，box1也是根层叠上下文的，所以他们的显示关系是通过z-index决定的,所以son-2会覆盖box1
+
+## 4.css选择器
+
+​	css选择器是指：`将css规则作用在页面中的哪些元素中`。
+
+​	基本选择器:父子`>`，后代` `，兄弟`+`、`~`，标签`tag`，属性选择器`[attr=value]`，id选择器、class选择器，通用选择器*，交集选择器（选择中同时满足多个选择器的标签，例如`div.son`）、并集选择器（一个css规则同时作用在多个选择器上，例如`div,p,span`），
+
+​	伪类：nth-child、hover、first-child、last-child、last-type-of、not、active、focus..
+
+​	伪元素：after、before...
+
+### css选择器划分
+
+- 简单选择器:使用了一种选择器
+- 复合选择器:通过简单选择器连接而成，如:div[id=ok]，div.son...
+- 复杂选择器:通过复合选择器与父子、后代、兄弟等选择器连接而成，如:div .box p
+
+## 5.css选择器的优先级
+
+​	css选择器优先级是指多个选择器作用于同一个元素时，浏览器以何种选择器来应用到元素上。
+
+### 速记版
+
+`!import`>内联样式 > ID 选择器 > 类选择器 = 属性选择器 = 伪类选择器 > 标签选择器 = 伪元素选择器>通用选择器
+
+### 选择器权重
+
+​	每种选择器都有其各自的权重，在多个选择器作用于一个元素时，就是通过计算选择器的权重从而将权重最高的选择器应用到元素上。
+
+> 1.内联样式权重 1000（内联样式权重固定1000，所以想要覆盖内联样式可以将选择器叠加到1000以上即可覆盖内联样式）
+>
+> 2.id选择器权重 100
+>
+> 3.class、属性、 伪类选择器权重 10
+>
+> 4.标签、伪元素选择器权重 1
+>
+> 其他选择器权重均为0
+
+如`div.box .title span`与`div#box01 div.title span `若同时作用到一个元素上：
+
+则`div.box .title span`：1+10+10+1=22
+
+则`div#box01 div.title span `:1+100+1+10+1=113
+
+所以权重最高的选择器的css规则会作用在对应元素上。
 
 # 四、JS
+
+## cookie、session、token
+
+​	
+
+
+
 ## bind、call、apply
   这三个方法都是修改函数执行时的this指向，call、apply都是立即调用函数，而bind是创建一个this指向被修改了的函数。call、apply的唯一区别就是传参方式不同而已。
 
@@ -1171,6 +1491,244 @@ js通过执行上下文栈来管理所有的执行上下文，在程序一个开
 
 ​	通过async来声明一个异步函数，异步函数执行完成时返回一个Promise成功的Promise对象
 
+## 箭头函数、类字段语法
+
+我们都知道箭头函数是没有this的，他的this是通过作用域链找到祖先作用域中的this来确定的。箭头函数的this是定义时就已经确定了，不会因为执行的对象不同而导致this的不同。
+
+### 类字段语法
+
+这种方式是类字段语法，类的属性可以直接在类的定义中声明和初始化，而不需要在构造函数中进行赋值，这种方式声明的属性会将其添加到实例上。
+
+并且在这里声明的箭头函数在调用时会继承外部作用域（class）而让`this`执行实例，调用该箭头函数时，它的 `this` 值将绑定到类的实例上，而不是调用位置的上下文。
+
+```js
+class Obj {
+  a = 'b'
+  ok = () => {
+    console.log(this);
+  }
+}
+
+const obj = new Obj()
+
+const ok = obj.ok
+
+ok() // {a:'b',ok:[Function]}
+
+```
+
+### Object
+
+为什么这种声明的方式不能让this指向obj呢？因为此箭头函数是在全局作用域中定义的。
+
+```js
+
+const obj = { ok: () => console.log(this) }
+
+const ok = obj.ok
+
+ok()
+
+```
+
+## 计时器和for循环
+
+### let版本
+
+说说下列结果
+
+```js
+for (let i = 0; i < 5; i++) {
+  setTimeout(() => {
+    console.log(i)
+  })
+}
+```
+
+0 1 2 3 4
+
+为什么？
+因为每次循环时都会产生一个块级作用域并声明当前`i`的值，`setTimeout`中的回调在调用时通过作用域链访问到块级作用域中声明的i。
+简单来说就是每次循环都缓存了i（在块级作用域里面声明了当前循环时的i），在回调调用时通过闭包读取到缓存值。
+
+相当于
+
+```js
+{
+	let i=0;
+     setTimeout(() => {
+    console.log(i)
+  })
+}
+{
+	let i=1;
+     setTimeout(() => {
+    console.log(i)
+  })
+}
+{
+	let i=2;
+     setTimeout(() => {
+    console.log(i)
+  })
+}
+....
+```
+
+
+
+### var版本
+
+说说下列结果
+
+```js
+for (var i = 0; i < 5; i++) {
+  setTimeout(() => {
+    console.log(i)
+  })
+}
+```
+
+5 5 5 5 5
+
+为什么？
+
+因为var声明的变量没有块级作用域，这种方式相当于把var声明在当前作用域中，每次循环产生的块级作用域对于var来说没有作用，当主线程同步任务的for循环完成时var声明的i已经是5了，下一个宏任务就按照注册顺序打印i了。
+
+## Web Woker
+
+​	`web worker`是浏览器独有的API，可以为`javascript`创建多个线程。只允许主线程创建`Web Worker`，可以让`Web Worker`执行一些后台任务。可以通过`Web Worker`创建子线程执行一些操作，例如耗费大量时间的同步操作（但不会阻塞主线程运行）、发送网络请求....有了`Web Worker`可以避免同步操作阻塞主线程渲染的问题。
+
+​	由于创建了多个线程，为了不影响主线程，所以`Web Worker`有以下限制：
+
+（1）**同源限制**
+
+​	分配给 Worker 线程运行的脚本文件，必须与主线程的脚本文件同源。
+
+（2）**DOM 限制**
+
+​	Worker 线程所在的全局对象，与主线程不一样，无法读取主线程所在网页的 DOM 对象，也无法使用`document`、`window`、`parent`这些对象。但是，Worker 线程可以`navigator`对象和`location`对象。
+
+（3）**通信联系**
+
+​	**Worker 线程**和**主线程**不在同一个上下文环境，它们不能直接通信，必须通过消息完成主线程和子线程的通信。
+
+（4）**脚本限制**
+
+​	Worker 线程不能执行`alert()`方法和`confirm()`方法，但可以使用 XMLHttpRequest 对象发出 AJAX 请求。
+
+（5）**文件限制**
+
+​	Worker 线程无法读取本地文件，即不能打开本机的文件系统（`file://`），它所加载的脚本，必须来自网络。
+
+
+
+### 1.主线程
+
+​	主线程通过`new Worker`来创建一个子线程，`Worker`构造函数必须是HTTP协议，必须加载网络脚本资源。返回一个worker实例，可以和对应子线程通信。
+
+```js
+new Worker('/index.js')  // 发送请求加载外部脚本资源，并将该资源放在子线程中执行
+```
+
+​	**通信**：
+
+1.主线程通过`worker.postMessage`向对应的子线程发送消息
+
+2.主线程通过`worker`的`message`监听子线程发送的消息
+
+3.主线程通过`worker.terminate`结束子线程。
+
+```js
+      const wb = new Worker('index.js')
+      // 接受子线程消息
+      wb.onmessage = (data) => {
+        console.log('接受子线程消息:' + data.data)
+        console.log(window.a);
+      }
+      setTimeout(() => {
+        // 向对应子线程发送消息
+        wb.postMessage('hello~')
+      }, 1000)
+```
+
+### 2.子线程
+
+​	子线程里失去了很多API，不过浏览器也为子线程提供了内置API。在子线程中是不能操作DOM，并且子线程和主线程的执行上下文是不同的，所以不能共享声明的变量、函数等。
+
+​	**通信**:
+
+1.子线程通过`this.postMessage`与发送消息给主线程
+
+2.子线程通过`this.addEventListen("message")`来监听主线程发送的消息。
+
+3.子线程通过`this.close`关闭线程，释放内存
+
+```js
+this.addEventListener('message', (data) => {
+  console.log('接受到主线程消息:' + data.data)
+})
+
+this.postMessage('子线程消息~~')
+
+```
+
+### 3.使用Web Worker的示例
+
+​	同步计算复杂数据时，会阻塞浏览器渲染线程，从而导致页面**卡死**。若我们使用`Web Worker`就不会产生这样的后果。
+
+​	1.不使用Web Worker（Sync）
+
+```html
+  <button>执行一段长时间阻塞主线程的代码</button>
+    <input />
+    <script>
+      const btn = document.querySelector('button')
+
+      function fun(time) {
+        const now = Date.now()
+        while (Date.now() - now <= time) {}
+      }
+
+      btn.onclick = () => {
+        // 渲染进程卡死
+        fun(2000)
+      }
+    </script>	
+```
+
+​	2.使用Web Worker
+
+​	主线程代码：
+
+```js
+   function webworker() {
+       // 执行复杂的同步任务
+        const worker = new Worker('01.js')
+        worker.onmessage=(e)=>{
+          console.log(e.data);
+          worker.terminate()
+        }
+      }
+```
+
+​	子线程代码：
+
+```js
+console.log('Work Load!')
+
+fun(2000)
+this.postMessage('计算完成~')
+this.close()
+function fun(time) {
+  const now = Date.now()
+  while (Date.now() - now <= time) {}
+}
+
+```
+
+
+
 ## 手写专区
 
 ### instanceof
@@ -1227,6 +1785,25 @@ console.log(MyInstanceof([], Object))
     const p = myNew(Person, 'Mark', 18)
     console.log(p);
   ```
+
+#### 注意
+
+​	若构造函数返回了一个对象，new的返回值就是这个对象而不是新创建的对象。
+
+```js
+
+function Person(name) {
+  this.name = name;
+  return { name: "Mark" };
+}
+
+const p = new Person("John");
+
+console.log(p); // {name:"Mark"}
+
+```
+
+
 
 ### 深浅拷贝
 
@@ -1363,47 +1940,33 @@ export default new Pubsub()
 
 ```ts
 /**
- * Promise.all
- * @param {Promise[]} array
- * @returns {Promise}
+ * @param {Promise[]} arr
  */
-Promise._all = function (array) {
+Promise._all = function (arr) {
   return new Promise((resolve, reject) => {
-    // 结束的个数
-    let downCount = 0
-    // 遍历每一个Promise对象，捕获他们的失败和成功
-    for (let i = 0; i < array.length; i++) {
-      array[i]
-        .then(() => {
-          // 每次成功都让结束的个数+1
-          downCount++
-          if (downCount === array.length) {
-            // 若结束的个数等于数组长度，就凝固promise
-            resolve()
+    const list = []
+    let count = 0
+    arr.forEach((p, index) => {
+      p.then(
+        (value) => {
+          count++
+          list.push({ index, value })
+          if (count === arr.length) {
+            resolve(
+              list
+                // 保证结果和传入的结果顺序保持一致。
+                .sort((a, b) => a.index - b.index)
+                .map((data) => data.value)
+            )
           }
-        })
-        .catch(() => {
-          // 只要有一个失败了，整个all都失败
-          reject()
-        })
-    }
-  })
-}
-
-const arr = [1, 2, 3]
-
-Promise._all(
-  arr.map(async (ele, index) => {
-    return new Promise((r) => {
-      setTimeout(() => {
-        console.log(ele)
-        r()
-      }, ele * 1000)
+        },
+        (reason) => {
+          reject(reason)
+        }
+      )
     })
   })
-).then(() => {
-  console.log('完成')
-})
+}
 
 ```
 
@@ -1411,31 +1974,863 @@ Promise._all(
 
 ```ts
 /**
- * Promise.race
- * @param {Promise[]} array
+ * @param {Promise[]} arr
  */
-Promise._race = function (array) {
+Promise._race = function (arr) {
   return new Promise((resolve, reject) => {
-    for (let i = 0; i < array.length; i++) {
-      array[i].then(() => resolve()).catch(() => reject())
-    }
+    arr.some((p) => {
+      p.then(
+        (value) => {
+          resolve(value)
+        },
+        (reason) => {
+          reject(reason)
+        }
+      )
+    })
   })
 }
 
-const arr = [1, 2, 3]
+```
 
-Promise._race(
-  arr.map((ele) => {
-    return new Promise((r) => {
-      setTimeout(() => {
-        console.log(ele);
-        r()
-      }, ele * 1000)
+### Promise.allSettled
+
+​	传入一个Promise数组，返回一个Promise对象。当数组中所有Promise实例的状态都凝固（也就是都成了fulfilled或rejected状态）时，返回的Promise对象状态设置为fulfilled，值为一个数组，数组每一项包含了Promise成功或失败、Promise成功或失败的结果。
+
+```js
+/**
+ * @param {Array<Promise<any>>} arr
+ * @returns
+ */
+Promise._allSettled = function (arr) {
+  return new Promise((resolve) => {
+    const list = []
+    let count = 0
+    arr.forEach((p, index) => {
+      p.then(
+        (value) => {
+          count++
+          // 保存结果
+          list.push({ result: value, index, status: 'fulfilled' })
+          if (count === arr.length) {
+            // 若全部都完成了
+            resolve(
+              list
+                .sort((a, b) => a.index - b.index)
+                // 保证顺序和数组顺序一致，不能因为谁先结束谁就在前
+                .map((data) => ({ result: data.result, status: data.status }))
+            )
+          }
+        },
+        (error) => {
+          count++
+          // 保存结果
+          list.push({ result: error, index, status: 'rejected' })
+          if (count === arr.length) {
+            // 若全部都完成了
+            resolve(
+              list
+                .sort((a, b) => a.index - b.index)
+                .map((data) => ({ result: data.result, status: data.status }))
+            )
+          }
+        }
+      )
     })
   })
-).then(() => {
-  console.log('ok')
-})
+}
 
+```
+
+
+
+### Promise
+
+Promise是用来处理异步回调地狱的解决方案，他可以通过链式调用来轻松解决因多次异步结果依赖导致的回调地狱问题。
+
+#### 状态、阶段
+
+Promise有两个阶段，三种状态：
+
+1.当**未确定结果**阶段，promise实例其初始状态为`pending`状态。
+
+2.当**确定结果**阶段，promise实例有`fulfilled`状态或`rejected`状态。
+
+#### 构造函数
+
+Promise的构造函数允许传递一个函数（成为`executor`），函数会在Promise的构造函数中执行。此函数可以接收两个参数`resovle`和`reject`这两个参数是一个函数，`promise`实例的状态就是通过这两个函数来设置的。
+
+**resolve**:调用`resolve`可以将`promise`的状态设置为`fulfilled`，并且可以传递一个实参，为此次`promise`履行设置一个结果`value`。
+
+**reject**：调用`reject`可以将`promise`的状态设置为`rejected`，并且可以传递一个实参，为此次`promise`拒绝设置一个原因`reason`。
+
+**状态凝固**：当promise实例只要被改变了一次状态就不会被再次修改，保证了value和reason的值。
+
+**executor**：会在构造函数中执行，当executor调用时内部出错，需要执行reject方法，让Promise实例设置为rejected，并设置出错的原因。
+
+#### promise.then
+
+![image-20230923134835932](C:\Users\Dell\AppData\Roaming\Typora\typora-user-images\image-20230923134835932.png)
+
+`promise.then(onFulfilled,onRejected)`
+
+then方法接受两个参数`onFulfilled`,`onRejected`，指当实例履行时执行`onFulfilled`回调，当实例拒绝是执行`onRejected`回调。
+
+
+
+##### 1.参数检查
+
+当这两个参数不是函数时，需要将其处理成一个默认函数，调用时获取本次promise`value`或`reason`的值。这些默认函数将来会合适时候调用。
+
+```js
+MyPromise.prototype.then = function(onFulfilled, onRejected) {
+  // 如果onFulfilled不是函数，给一个默认函数，返回value
+  var realOnFulfilled = onFulfilled;
+  if(typeof realOnFulfilled !== 'function') {
+    realOnFulfilled = function (value) {
+      return value;
+    }
+  }
+
+  // 如果onRejected不是函数，给一个默认函数，返回reason的Error
+  var realOnRejected = onRejected;
+  if(typeof realOnRejected !== 'function') {
+    realOnRejected = function (reason) {
+      throw reason;
+    }
+  }
+}
+```
+
+
+
+
+
+##### 2.（函数参数）参数的返回值
+
+###### `onFulfilled`函数的返回值
+
+1.若返回非Promise值，且Promise实例状态为`fulfilled`时，则`then函数`会返回一个新的Promise且新Promise的状态为履行，其value为`onFulfilled`的返回值。
+
+2.若返回一个Promise值，则`then函数`会返回一个promise实例，其状态和结果根据`onFulfilled`或`onRejected`决定。
+
+###### `onRejected`函数的返回值
+
+1.若返回非Promise值时，且Promise实例状态为`rejected`时，则`then函数`会返回一个新的Promise且新Promise的状态为履行，其value为`onRejected`的返回值。
+
+2.若返回一个Promise值，则`then函数`会返回一个promise实例，其状态和结果根据`onFulfilled`或`onRejected`决定。
+
+
+
+##### 3.onFulfilled与onRejected执行时机
+
+​	通过then方法我们可以告诉Promise实例在`fulfuilled`或`rejected`状态时执行相应的函数。
+
+​	但我们需要在什么时候调用这些函数呢？换个思路想，Promise在什么时候会被设置状态呢？其实就是在`executor`中执行`resolve`、`reject`函数，所以我们可以将`onFulfilled`、`onRejected`函数保存在实例中，在调用`resolve`、`reject`时不仅要设置状态还要执行对应状态的函数。
+
+​	这种将回调保存起来，在满足条件时执行就是订阅发布模式。
+
+
+
+##### 4.then的返回值，链式调用
+
+​	then的返回值是一个Promise实例，其状态和结果是根据当前Promise实例的状态和结果来定的。简单来说若两个参数都不返回Promise对象，则then函数返回一个Promise状态为fulfilled的实例，value或reason为对应参数的返回值。
+
+###### 4.1当`onFulfilled`和`onRejected`返回非Promise值
+
+若Promise实例为`fulfilled`，执行`onFulfilled`，则返回的Promise实例也为`fulfilled`，value为`onFulfilled`的返回值。
+
+若Promise实例为`rejected`，执行`onRejected`，则返回的Promise实例为`fulfilled`，value为`onRejected`的返回值。
+
+注意需要捕获`onFulfilled`执行抛出的异常，若有异常需要执行reject，将返回的Promise设置为`rejected`
+
+伪代码(**代码暂不考虑异步**)
+
+```js
+then(onFulfilled,onRejected){
+    // 省略....
+    const p =  new Promise((resolve,reject)=>{
+        try{
+          // 需要捕获回调中的错误，设置p的状态和结果
+          const result = onFulfilled(this.value)
+		 resolve(result)
+        }catch(error){
+           reject(error)
+	    }
+    })  
+    return p
+}
+```
+
+###### 4.2 当`onFulfilled`和`onRejected`返回Promise值
+
+​	则then的返回一个promise实例，其状态和结果根据`onFulfilled`或`onRejected`决定。
+
+伪代码(**代码暂不考虑异步**)
+
+```js
+then(onFulfilled,onRejected){
+    // 省略....
+    const p =  new Promise((resolve,reject)=>{
+   		try{
+            const result = onFulfilled(this.value)
+            if(result instanceof Promise){
+                // 若函数返回结果是一个新的Promise
+                // 当新Promise有结果时，去设置p的状态和结果
+                result.then(
+                    (r)=>resolve(r),
+                    (e)=>rejecte(e)
+                )
+            }else{
+                // 返回的是一个非Promise值，让p的状态设置为fulfilled，结果为返回值
+                resolve(result)
+            }
+        }catch(error){
+            reject(error)
+        }
+     
+    })  
+    return p
+}
+```
+
+###### 4.3 解决重复引用
+
+​	then方法中的回调函数中返回的promise不能是then方法的返回值。**注意需要让代码异步执行否则同步执行时构造函数里获取不到p导致出错**。使用queueMicrotask来创建一个微任务，这样就能确保在读取p时，p已经被初始化了。
+
+伪代码（**不考虑异步**）
+
+```js
+then(onFulfilled,onRejected){
+    // 省略....
+    const p =  new Promise((resolve,reject)=>{
+        queueMicrotask(()=>{
+          try{
+            const result = onFulfilled(this.value)
+                if(result instanceof Promise){
+                    if(result===p){
+                        // 抛出去的错误会被trycatch捕获，从而将then返回的p设置为rejected，reason为错误信息。
+                        throw new Error('重复引用Promise!')
+                    }
+                    // 若函数返回结果是一个新的Promise
+                    // 当新Promise有结果时，去设置p的状态和结果
+                    result.then(
+                        (r)=>resolve(r),
+                        (e)=>rejecte(e)
+                    )
+                }else{
+                    // 返回的是一个非Promise值，让p的状态设置为fulfilled，结果为返回值
+                    resolve(result)
+                }
+            }catch(error){
+                reject(error)
+            }
+        })
+
+    })  
+    return p
+}
+```
+
+##### 5.then中的异常
+
+​	在then中抛出的异常或暴露的错误应该让下一个then的`onRejected`捕获执行。
+
+```js
+Promise.resolve()
+.then(()=>{
+	throw 'error'
+})
+.then(
+	()=>{},
+    (reason)=>{
+		console.log(reason) ; //error
+    }
+)
+```
+
+##### 6.抽离逻辑
+
+将then中的大部分逻辑抽离出来。要注意一定要在微任务中执行，否则获取不到p导致运行出错
+
+```js
+  /**
+   * 抽离Promise.then中的逻辑
+   * @param {*} value 履行或拒绝的结果
+   * @param {*} p 即将返回的Promise实例
+   * @param {*} cb 要执行的onFulfilled或onRejected回调
+   * @param {*} resolve 履行
+   * @param {*} reject 拒绝
+   */
+  resolvePromise(value, p, cb, resolve, reject) {
+    try {
+      const result = cb(value)
+      if (result instanceof MyPromise) {
+        // 返回的Promise
+        if (result === p) {
+          // 返回的Promise为then返回值的Promise
+          throw new TypeError('Promise重复引用!')
+        }
+        // 监听返回的Promise值是什么状态从而设置p的状态和结果
+        result.then(
+          (v) => resolve(v),
+          (e) => reject(e)
+        )
+      } else {
+        // 返回非Promise
+        resolve(value)
+      }
+    } catch (error) {
+      // 出错，设置为fulfilled
+      reject(error)
+    }
+  }
+```
+
+##### 7.异步处理
+
+​	前面的代码仅仅只是做了同步处理，当是异步操作的时候，不能在调用then的时候直接处理`onFulfilled`或`onRejected`，需要在promise有结果时才能进行处理。
+
+​	这种方式能够很好的支持异步的链式调用，当前一个promise有了结果后才会调用下一个promise.then中的回调，后面依赖前面，导致必须前面的promise有了结果才会执行后续then中的回调。
+
+​	同时为了支持链式调用、结果暴露、解决重复引用、微任务调用，所以使用封装好的resolvePromise来操作。
+
+```js
+      if (this.status === MyPromise.PENDING) {
+        // 异步
+        // 将onfulfilled函数保存在履行的回调中
+        this.onFulfuilledCallbacks.push(() => {
+          // 该函数是在promise.resolve时才会调用
+          this.runAsyncCb(() => {
+            try {
+              this.resolvePromise(this.value, p, _onFulfilled, resolve, reject)
+            } catch (error) {
+              reject(error)
+            }
+          })
+        })
+        // 将onrejected函数保存在拒绝的回调中
+        this.onRejectedCallbacks.push(() => {
+          // 该函数是在promise.reject时才会调用
+          this.runAsyncCb(() => {
+            try {
+              this.resolvePromise(this.reason, p, _onRejected, resolve, reject)
+            } catch (error) {
+              reject(error)
+            }
+          })
+        })
+      }
+```
+
+
+
+#### v 0.1
+
+​	实现Promise的状态系统
+
+```js
+class MyPromise {
+  static PENDING = 'pending'
+  static FULFILLED = 'fulfilled'
+  static REJECTED = 'rejected'
+
+  /**
+   * Promise
+   * @param {import('./index').Executor} executor
+   */
+  constructor(executor) {
+    // 失败的初始值
+    this.reason = null
+    // 成功的初始值
+    this.value = null
+    // promise的状态
+    this.status = MyPromise.PENDING
+    try {
+      // 执行传入的回调
+      // 并将设置实例状态的方法传入进回调
+      executor(this.resolve.bind(this), this.reject.bind(this))
+    } catch (error) {
+      // 若回调内部出错，则设置状态为拒绝
+      this.reject(error)
+    }
+  }
+  /**
+   * 若Promise实例的状态为pending则
+   * 将Promise实例的状态设置为成功
+   * 并保存履行的值
+   * @param {any} value
+   * @example promise.resolve(1)
+   */
+  resolve(value) {
+    if (this.status === MyPromise.PENDING) {
+      this.value = value
+      this.status = MyPromise.FULFILLED
+    }
+  }
+  /**
+   * 若Promise实例状态为pending则
+   * 将Promise实例状态设置为rejected
+   * 并获取拒绝的原因
+   * @param {any} reason
+   */
+  reject(reason) {
+    if (this.status === MyPromise.PENDING) {
+      this.reason = reason
+      this.status = MyPromise.REJECTED
+    }
+  }
+}
+
+```
+
+#### v 0.2
+
+ 实现了Promise.then方法，可以在成功和失败的时候执行相应的回调，但未实现链式调用。
+
+```js
+class MyPromise {
+  static PENDING = 'pending'
+  static FULFILLED = 'fulfilled'
+  static REJECTED = 'rejected'
+
+  /**
+   * Promise
+   * @param {import('./index').Executor} executor
+   */
+  constructor(executor) {
+    // 失败的初始值
+    this.reason = null
+    // 成功的初始值
+    this.value = null
+    // promise的状态
+    this.status = MyPromise.PENDING
+    // 履行的回调们
+    this.onFulfuilledCallbacks = []
+    // 拒绝的回调们
+    this.onRejectedCallbacks = []
+    try {
+      // 执行传入的回调
+      // 并将设置实例状态的方法传入进回调
+      executor(this.resolve.bind(this), this.reject.bind(this))
+    } catch (error) {
+      // 若回调内部出错，则设置状态为拒绝
+      this.reject(error)
+    }
+  }
+  /**
+   * 若Promise实例的状态为pending则
+   * 将Promise实例的状态设置为成功
+   * 并保存履行的值
+   * 执行履行的回调们
+   * @param {any} value
+   * @example promise.resolve(1)
+   */
+  resolve(value) {
+    if (this.status === MyPromise.PENDING) {
+      // 保证状态凝固
+      this.value = value
+      this.status = MyPromise.FULFILLED
+      this.onFulfuilledCallbacks.forEach((cb) => {
+        cb(this.value)
+      })
+    }
+  }
+  /**
+   * 若Promise实例状态为pending则
+   * 将Promise实例状态设置为rejected
+   * 并获取拒绝的原因
+   * 执行拒绝的回调们
+   * @param {any} reason
+   */
+  reject(reason) {
+    if (this.status === MyPromise.PENDING) {
+      // 保证状态凝固
+      this.reason = reason
+      this.status = MyPromise.REJECTED
+      this.onRejectedCallbacks.forEach((cb) => {
+        cb(this.resolve)
+      })
+    }
+  }
+  /**
+   * promise.then
+   * @param {import('./index').OnFulfilled} onFulfilled
+   * @param {import('./index').OnRejected} onRejected
+   */
+  then(onFulfilled, onRejected) {
+    let _onFulfiled = onFulfilled
+    let _onRejected = onRejected
+    // 参数检查，若不是函数，则将onFulfilled、onRejected设置为默认函数
+    // 默认函数都是返回一个value或reason
+    if (typeof _onFulfiled !== 'function') {
+      _onFulfiled = function (value) {
+        return value
+      }
+    }
+    if (typeof _onRejected !== 'function') {
+      _onRejected = function (reason) {
+        throw reason
+      }
+    }
+    // 将onfulfilled函数保存在履行的回调中
+    this.onFulfuilledCallbacks.push(_onFulfiled)
+    // 将onrejected函数保存在拒绝的回调中
+    this.onRejectedCallbacks.push(_onRejected)
+  }
+}
+
+```
+
+v 0.3
+
+​	实现Promise.then的同步链式调用。
+
+```js
+class MyPromise {
+  static PENDING = 'pending'
+  static FULFILLED = 'fulfilled'
+  static REJECTED = 'rejected'
+
+  /**
+   * Promise
+   * @param {import('./index').Executor} executor
+   */
+  constructor(executor) {
+    // 失败的初始值
+    this.reason = null
+    // 成功的初始值
+    this.value = null
+    // promise的状态
+    this.status = MyPromise.PENDING
+    // 履行的回调们
+    this.onFulfuilledCallbacks = []
+    // 拒绝的回调们
+    this.onRejectedCallbacks = []
+    try {
+      // 执行传入的回调
+      // 并将设置实例状态的方法传入进回调
+      executor(this.resolve.bind(this), this.reject.bind(this))
+    } catch (error) {
+      // 若回调内部出错，则设置状态为拒绝
+      this.reject(error)
+    }
+  }
+  /**
+   * 若Promise实例的状态为pending则
+   * 将Promise实例的状态设置为成功
+   * 并保存履行的值
+   * 执行履行的回调们
+   * @param {any} value
+   * @example promise.resolve(1)
+   */
+  resolve(value) {
+    if (this.status === MyPromise.PENDING) {
+      // 保证状态凝固
+      this.value = value
+      this.status = MyPromise.FULFILLED
+      this.onFulfuilledCallbacks.forEach((cb) => {
+        this.runAsyncCb(() => {
+          cb(this.value)
+        })
+      })
+    }
+  }
+  /**
+   * 若Promise实例状态为pending则
+   * 将Promise实例状态设置为rejected
+   * 并获取拒绝的原因
+   * 执行拒绝的回调们
+   * @param {any} reason
+   */
+  reject(reason) {
+    if (this.status === MyPromise.PENDING) {
+      // 保证状态凝固
+      this.reason = reason
+      this.status = MyPromise.REJECTED
+      this.onRejectedCallbacks.forEach((cb) => {
+        this.runAsyncCb(() => {
+          cb(this.reason)
+        })
+      })
+    }
+  }
+  /**
+   * promise.then
+   * 1.同步处理
+   *  当调用then时，Promise已经进入结果阶段了，可以根据状态直接执行相应回调。
+   * 2.异步处理
+   * 3.链式调用，返回Promise
+   *  3.1 回调返回非Promise
+   *  3.2 回调返回Promise
+   *    3.2.1 处理一般情况
+   *    3.2.2 处理重复引用
+   * @param {import('./index').OnFulfilled} onFulfilled
+   * @param {import('./index').OnRejected} onRejected
+   */
+  then(onFulfilled, onRejected) {
+    let _onFulfiled = onFulfilled
+    let _onRejected = onRejected
+    // 参数检查，若不是函数，则将onFulfilled、onRejected设置为默认函数
+    // 默认函数都是返回一个value或reason
+    if (typeof _onFulfiled !== 'function') {
+      _onFulfiled = function (value) {
+        return value
+      }
+    }
+    if (typeof _onRejected !== 'function') {
+      _onRejected = function (reason) {
+        throw reason
+      }
+    }
+    // 链式调用
+    const p = new MyPromise((resolve, reject) => {
+      // 为什么要将调用等其他逻辑放在里面新promise的executor里，
+      // 就是为了保证在调用onFulfilled或onRejected后
+      // 可以根据异常来调用resolve，reject并设置新Promise的状态和结果
+      if (this.status === MyPromise.PENDING) {
+        // 异步
+        // 将onfulfilled函数保存在履行的回调中
+        this.onFulfuilledCallbacks.push(_onFulfiled)
+        // 将onrejected函数保存在拒绝的回调中
+        this.onRejectedCallbacks.push(_onRejected)
+      } else if (this.status === MyPromise.FULFILLED) {
+        // 同步-履行
+        this.runAsyncCb(() => {
+          // 异步任务，为了能读取p
+          this.resolvePromise(this.value, p, onFulfilled, resolve, reject)
+        })
+      } else if (this.status === MyPromise.REJECTED) {
+        // 同步-失败
+        this.runAsyncCb(() => {
+          // 异步任务，为了读取p
+          this.resolvePromise(this.reason, p, onRejected, resolve, reject)
+        })
+      }
+    })
+    return p
+  }
+  /**
+   * 抽离Promise.then中的逻辑
+   * @param {*} value 履行或拒绝的结果
+   * @param {*} p 即将返回的Promise实例
+   * @param {*} cb 要执行的onFulfilled或onRejected回调
+   * @param {*} resolve 履行
+   * @param {*} reject 拒绝
+   */
+  resolvePromise(value, p, cb, resolve, reject) {
+    try {
+      const result = cb(value)
+      if (result instanceof MyPromise) {
+        // 返回的Promise
+        if (result === p) {
+          // 返回的Promise为then返回值的Promise
+          throw new TypeError('Promise重复引用!')
+        }
+        // 监听返回的Promise值是什么状态从而设置p的状态和结果
+        result.then(
+          (v) => resolve(v),
+          (e) => reject(e)
+        )
+      } else {
+        // 返回非Promise
+        resolve(value)
+      }
+    } catch (error) {
+      // 出错，设置为fulfilled
+      reject(error)
+    }
+  }
+  /**
+   * 创建微任务
+   * @param {*} cb
+   */
+  runAsyncCb(cb) {
+    queueMicrotask(cb)
+  }
+}
+```
+
+#### v 0.3
+
+​	实现了then的异步处理
+
+```js
+class MyPromise {
+  static PENDING = 'pending'
+  static FULFILLED = 'fulfilled'
+  static REJECTED = 'rejected'
+
+  /**
+   * Promise
+   * @param {import('./index').Executor} executor
+   */
+  constructor(executor) {
+    // 失败的初始值
+    this.reason = null
+    // 成功的初始值
+    this.value = null
+    // promise的状态
+    this.status = MyPromise.PENDING
+    // 履行的回调们
+    this.onFulfuilledCallbacks = []
+    // 拒绝的回调们
+    this.onRejectedCallbacks = []
+    try {
+      // 执行传入的回调
+      // 并将设置实例状态的方法传入进回调
+      executor(this.resolve.bind(this), this.reject.bind(this))
+    } catch (error) {
+      // 若回调内部出错，则设置状态为拒绝
+      this.reject(error)
+    }
+  }
+  /**
+   * 若Promise实例的状态为pending则
+   * 将Promise实例的状态设置为成功
+   * 并保存履行的值
+   * 执行履行的回调们
+   * @param {any} value
+   * @example promise.resolve(1)
+   */
+  resolve(value) {
+    if (this.status === MyPromise.PENDING) {
+      // 保证状态凝固
+      this.value = value
+      this.status = MyPromise.FULFILLED
+      this.onFulfuilledCallbacks.forEach((cb) => {
+        cb()
+      })
+    }
+  }
+  /**
+   * 若Promise实例状态为pending则
+   * 将Promise实例状态设置为rejected
+   * 并获取拒绝的原因
+   * 执行拒绝的回调们
+   * @param {any} reason
+   */
+  reject(reason) {
+    if (this.status === MyPromise.PENDING) {
+      // 保证状态凝固
+      this.reason = reason
+      this.status = MyPromise.REJECTED
+      this.onRejectedCallbacks.forEach((cb) => {
+        cb()
+      })
+    }
+  }
+  /**
+   * promise.then
+   * 1.同步处理
+   *  当调用then时，Promise已经进入结果阶段了，可以根据状态直接执行相应回调。
+   * 2.异步处理
+   * 3.链式调用，返回Promise
+   *  3.1 回调返回非Promise
+   *  3.2 回调返回Promise
+   *    3.2.1 处理一般情况
+   *    3.2.2 处理重复引用
+   * @param {import('./index').OnFulfilled} onFulfilled
+   * @param {import('./index').OnRejected} onRejected
+   */
+  then(onFulfilled, onRejected) {
+    let _onFulfilled = onFulfilled
+    let _onRejected = onRejected
+    // 参数检查，若不是函数，则将onFulfilled、onRejected设置为默认函数
+    // 默认函数都是返回一个value或reason
+    if (typeof _onFulfilled !== 'function') {
+      _onFulfilled = function (value) {
+        return value
+      }
+    }
+    if (typeof _onRejected !== 'function') {
+      _onRejected = function (reason) {
+        throw reason
+      }
+    }
+    // 链式调用
+    const p = new MyPromise((resolve, reject) => {
+      // 为什么要将调用等其他逻辑放在里面新promise的executor里，
+      // 就是为了保证在调用onFulfilled或onRejected后
+      // 可以根据异常来调用resolve，reject并设置新Promise的状态和结果
+      if (this.status === MyPromise.PENDING) {
+        // 异步
+        // 将onfulfilled函数保存在履行的回调中
+        this.onFulfuilledCallbacks.push(() => {
+          // 该函数是在promise.resolve时才会调用
+          this.runAsyncCb(() => {
+            try {
+              this.resolvePromise(this.value, p, _onFulfilled, resolve, reject)
+            } catch (error) {
+              reject(error)
+            }
+          })
+        })
+        // 将onrejected函数保存在拒绝的回调中
+        this.onRejectedCallbacks.push(() => {
+          // 该函数是在promise.reject时才会调用
+          this.runAsyncCb(() => {
+            try {
+              this.resolvePromise(this.reason, p, _onRejected, resolve, reject)
+            } catch (error) {
+              reject(error)
+            }
+          })
+        })
+      } else if (this.status === MyPromise.FULFILLED) {
+        // 同步-履行
+        this.runAsyncCb(() => {
+          // 异步任务，为了能读取p
+          this.resolvePromise(this.value, p, _onFulfilled, resolve, reject)
+        })
+      } else if (this.status === MyPromise.REJECTED) {
+        // 同步-拒绝
+        this.runAsyncCb(() => {
+          // 异步任务，为了读取p
+          this.resolvePromise(this.reason, p, onRejected, resolve, reject)
+        })
+      }
+    })
+    return p
+  }
+  /**
+   * 抽离Promise.then中的逻辑
+   * @param {*} value 履行或拒绝的结果
+   * @param {*} p 即将返回的Promise实例
+   * @param {*} cb 要执行的onFulfilled或onRejected回调
+   * @param {*} resolve 履行
+   * @param {*} reject 拒绝
+   */
+  resolvePromise(value, p, cb, resolve, reject) {
+    try {
+      const result = cb(value)
+      if (result instanceof MyPromise) {
+        // 返回的Promise
+        if (result === p) {
+          // 返回的Promise为then返回值的Promise
+          throw new TypeError('Promise重复引用!')
+        }
+        // 监听返回的Promise值是什么状态从而设置p的状态和结果
+        result.then(
+          (v) => resolve(v),
+          (e) => reject(e)
+        )
+      } else {
+        // 返回非Promise
+        resolve(value)
+      }
+    } catch (error) {
+      // 出错，设置为fulfilled
+      reject(error)
+    }
+  }
+  /**
+   * 创建微任务
+   * @param {*} cb
+   */
+  runAsyncCb(cb) {
+    queueMicrotask(cb)
+  }
+}
 ```
 

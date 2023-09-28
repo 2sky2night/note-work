@@ -1,42 +1,27 @@
 /**
- * Promise.all
- * @param {Promise[]} array
- * @returns {Promise}
+ * @param {Promise[]} arr
  */
-Promise._all = function (array) {
+Promise._all = function (arr) {
   return new Promise((resolve, reject) => {
-    // 结束的个数
-    let downCount = 0
-    // 遍历每一个Promise对象，捕获他们的失败和成功
-    for (let i = 0; i < array.length; i++) {
-      array[i]
-        .then(() => {
-          // 每次成功都让结束的个数+1
-          downCount++
-          if (downCount === array.length) {
-            // 若结束的个数等于数组长度，就凝固promise
-            resolve()
+    const list = []
+    let count = 0
+    arr.forEach((p, index) => {
+      p.then(
+        (value) => {
+          count++
+          list.push({ index, value })
+          if (count === arr.length) {
+            resolve(
+              list
+                .sort((a, b) => a.index - b.index)
+                .map((data) => data.value)
+            )
           }
-        })
-        .catch(() => {
-          // 只要有一个失败了，整个all都失败
-          reject()
-        })
-    }
-  })
-}
-
-const arr = [1, 2, 3]
-
-Promise._all(
-  arr.map(async (ele, index) => {
-    return new Promise((r) => {
-      setTimeout(() => {
-        console.log(ele)
-        r()
-      }, ele * 1000)
+        },
+        (reason) => {
+          reject(reason)
+        }
+      )
     })
   })
-).then(() => {
-  console.log('完成')
-})
+}
