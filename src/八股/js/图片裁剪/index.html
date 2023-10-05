@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <input type="file" />
+    <img />
+    <button>裁剪</button>
+    <div class="cutter-result">
+      <div>裁剪好的效果</div>
+      <img />
+    </div>
+    <script>
+      const img = document.querySelector('img')
+      const input = document.querySelector('input')
+      const button = document.querySelector('button')
+      const resultImg = document.querySelector('.cutter-result img')
+
+      // 图片blob数据
+      let imgData
+
+      // 图片上传
+      input.addEventListener('change', () => {
+        const data = input.files[0]
+        if (data) {
+          imgData = fileToBlob(data)
+          img.src = imgData
+        }
+      })
+
+      // 裁剪图片
+      button.addEventListener('click', () => {
+        if (imgData) {
+          const img = new Image()
+          img.src = imgData
+          img.onload = () => {
+            cutter(img, 100, 100, 100, 100, (data, blob) => {
+              resultImg.src = data
+              const xhr = new XMLHttpRequest()
+              const formData = new FormData()
+              formData.append('image', blob)
+              xhr.open('post', '/post')
+              xhr.send(formData)
+            })
+          }
+        }
+      })
+
+      function cutter(img, width, height, left, top, cb) {
+        const myCanvas = document.createElement('canvas')
+        const ctx = myCanvas.getContext('2d')
+        myCanvas.width = width // 画布大小应为裁剪框大小
+        myCanvas.height = height //  画布大小应为裁剪框大小
+        ctx.drawImage(img, left, top, width, height, 0, 0, width, height)
+        myCanvas.toBlob((blob) => {
+          const url = URL.createObjectURL(blob)
+          cb(url, blob)
+        })
+      }
+
+      /**
+       * 图片转blob
+       * @param {File} file
+       */
+      function fileToBlob(file) {
+        const blob = new Blob([file], { type: file.type })
+        const url = URL.createObjectURL(blob)
+        return url
+      }
+    </script>
+  </body>
+</html>

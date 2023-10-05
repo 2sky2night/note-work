@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <input type="file" />
+    <img />
+    <script>
+      const img = document.querySelector('img')
+      const input = document.querySelector('input')
+      input.onchange = function () {
+        const data = this.files[0]
+        if (data) {
+          byBlob()
+          // byBase64()
+        }
+        function byBlob() {
+          const blob = new Blob([data], { type: data.type })
+          const url = URL.createObjectURL(blob)
+          console.log(url);
+          img.src = url
+        }
+        function byBase64() {
+          const fd = new FileReader()
+          fd.readAsDataURL(data)
+          fd.addEventListener('load', () => {
+            img.src = fd.result
+          })
+        }
+      }
+    </script>
+  </body>
+</html>
