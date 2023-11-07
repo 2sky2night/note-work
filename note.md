@@ -782,6 +782,50 @@ son-2、box1、box2。
 
 所以权重最高的选择器的css规则会作用在对应元素上。
 
+## 6.包含块
+
+
+
+一个元素的尺寸和位置通常受到包含块（containing block）的影响，因为我们时常会通过百分比来设置元素的尺寸和位置，而这个百分比的依据就是通过该元素的包含块来计算的。
+
+
+
+包含块有两种：根标签包含块，以及相对包含块。除了根标签以外的包含块都是相对的，因为需要根据参照元素决定。
+
+
+
+### 如何确定包含块？
+
+
+
+确定一个元素的包含块的过程完全依赖于这个元素的 `position` 属性：
+
+
+
+\1. 若元素的定位方式为 `static`、`relative` 或 `sticky`，则他的包含块既是距离最近的祖先块级元素。
+
+\2. 若元素设置的定位方式为`fixed`，则他的包含块是视口(html)
+
+\3. 若元素设置的定位方式为`absolute`，则他的包含块是距离最近的设置了***\*非静态定位\****的块级元素。
+
+
+
+### 百分比单位
+
+
+
+某些CSS属性若值为百分比时，就是通过其包含块决定的，例如:`width`、`height`、`padding`、`margin`。
+
+
+
+- width，根据包含块宽度*百分比的结果来设置宽度
+
+- height，根据包含块高度*百分比的结果来设置高度
+
+- padding，根据包含块***\*宽度\*****百分比的结果来设置内边距(哪个方向都一样)
+
+- margin，根据包含块***\*宽度\*****百分比的结果来设置外边距(哪个方向都一样)
+
 # 四、JS
 
 ## cookie、session、token
@@ -1554,14 +1598,30 @@ var允许同作用域重复声明，let、const不允许在同一作用域下重
   异步加载模块，模块加载完成后再执行后续操作
 ### CMD
   同步加载模块，需要时才会通过require来获取导出模块。导出会输出一个对象，后续导入该模块都返回该对象，除非清空缓存，模块内部的操作不会影响导出的这个对象。
+
+​	CMD模块化，是运行时加载的，每次执行`require`都会执行整个模块，并获得导出数据的拷贝。
+
 ### ESModule
   异步加载模块，有一个独立的模块依赖的解析阶段。并且是**编译时输出接口**，导出的是一个引用，所以通过引用修改导出的内容时，所有使用该模块的都会受到影响（浅拷贝）
+
+​	ES模块化是编译时加载的，每次导入会得到只读的引用数据。
+
+### CMD和ESModule的区别
+
+1. 静态与动态：CMD是运行时才确定模块间的依赖关系，ESModule是编译时确定模块间的依赖关系。（**动态**是指对于模块的依赖关系建立在代码执行阶段；**静态**是指对于模块的依赖关系建立在代码编译阶段）
+
+2. 引用与拷贝：CMD导入的值都是一份拷贝，ESModule导入的值是一份引用。
+
+3. 异步与同步：CMD是调用require函数才获取模块数据，ESModule是编译时就已经加载好模块数据了。
+
+4. 导入导出方式不一致
 
 ## requestAnimationFrame
   requestAnimationFrame可以通过JS控制动画，通过回调里面的操作来通知浏览器以该操作来重绘页面。
   在反复调用该方法时，则会每帧执行一次回调函数，但帧这个东西时根据屏幕刷新率来定的，虽说在各种显示屏下触发的间隔可能不同，但是在同一屏幕刷新率下每次执行的间隔时间都是相同的。
   定时器就不同了，可能会因为事件循环而产生时间间隔的误差（因为是红任务，红任务会在消息队列中排队到主线程处理，若到时间了但前面有任务没执行，就会产生误差），但`requestAnimationFrame`是异步任务，在反复执行时回调触发的间隔时间都是相同的。
   基本用法:`requestAnimationFrame(callback)`,回调函数可以接受一个参数，这个参数代表了从页面加载完毕到执行该回调的时间，一般用来计算动画开始时间与动画执行的时间。
+
   ### 案例1
   ```js
     const keyframesFun = () => {
@@ -1680,13 +1740,15 @@ js通过执行上下文栈来管理所有的执行上下文，在程序一个开
 
 ​	通过async来声明一个异步函数，异步函数执行完成时返回一个Promise成功的Promise对象
 
-## 箭头函数、类字段语法
+## 箭头函数与类字段语法
 
 我们都知道箭头函数是没有this的，他的this是通过作用域链找到祖先作用域中的this来确定的。箭头函数的this是定义时就已经确定了，不会因为执行的对象不同而导致this的不同。
 
 ### 类字段语法
 
 这种方式是类字段语法，类的属性可以直接在类的定义中声明和初始化，而不需要在构造函数中进行赋值，这种方式声明的属性会将其添加到实例上。
+
+其实就是一种语法糖，相当于类字段语法运行在构造函数中的。
 
 并且在这里声明的箭头函数在调用时会继承外部作用域（class）而让`this`执行实例，调用该箭头函数时，它的 `this` 值将绑定到类的实例上，而不是调用位置的上下文。
 
@@ -1945,12 +2007,63 @@ function fun(time) {
 ​	整个JS应用的执行流程如下：
 
 1. 主线程执行同步任务
-2. 遇到异步操作时将异步任务注册给`event table`，待合适时会入队到任务队列中
+2. 遇到异步操作时将异步任务注册给`event table`，待合适时会入队到任务队列`event queue`中
 3. 主线程同步任务执行完成，查看任务队列中是否有需要执行的任务
 4. 若有，出队然后执行一个任务；若无，执行完毕。
 5. 主线程不断重复步骤3、4
 
 整个执行流程就是指事件循环，事件循环就是JS的运行机制。
+
+### 4.任务优先级
+
+​	在node环境下，任务是有优先级的：
+
+```js
+process.nextTick()>Promise.then()>setTimeout>setImmediate。
+```
+
+​	只需要知道`nextTick`比`then`注册的任务有更高优先级。
+
+### 5.微任务须知
+
+​	若在本次循环的某个微任务执行时，又创建了微任务，则这个新的微任务会添加到本次循环的**微任务队尾**中，等待执行。
+
+```js
+console.log('script start')
+
+Promise.resolve().then(() => {
+  console.log('then01')
+  Promise.resolve().then(() => {
+    console.log('then02')
+  })
+})
+
+Promise.resolve().then(() => {
+  console.log('then03');
+})
+
+setTimeout(() => {
+  console.log('setTimeout')
+  Promise.resolve().then(() => {
+    console.log('then')
+  })
+})
+
+console.log('script end')
+
+```
+
+### 6.宏微任务相关API
+
+#### 宏
+
+setTimeout、setInterval、requestAnimationFrame、IO操作、UI渲染
+
+#### 微
+
+then、queueMicrotask、Observer、nextTick 
+
+
 
 ## 设计模式
 
@@ -1959,6 +2072,139 @@ https://juejin.cn/post/7061987842473345061
 https://www.cnblogs.com/imwtr/p/9451129.html
 
 
+
+## 给DOM绑定自定义事件
+
+​	通过给DOM对象绑定自定义事件，即可在某一时刻触发这个事件，完成自定义事件的监听。
+
+```js
+// 绑定自定义事件
+button.addEventListener('message', () => {
+    console.log('message')
+})
+
+// 分发自定义事件
+button.dispatchEvent(new Event('message'))
+```
+
+## Super关键字
+
+​	super关键字可以在类的方法中使用，使用方式有3种：获取原型上的属性，调用基类构造函数，给实例添加属性
+
+### 以函数调用
+
+ 以函数调用，`super()`只能在构造函数中使用，可以将基类的属性挂载到当前实例上。
+
+```js
+      class Person {
+        constructor(name, age) {
+          this.name = name
+          this.age = age
+        }
+        say(){
+          console.log('hello~')
+        }
+      }
+      class Student extends Person {
+        constructor(name, age, score) {
+          // 调用父类构造函数，并且在调用时其函数this指向当前实例，就可以给student实例挂载person的属性了。
+          super(name, age)
+          this.score=score
+        }
+      }
+```
+
+### 访问属性、调用方法
+
+访问属性，`super.xxx`，若super以对象形式调用某个方法，则此时的super为基类的原型对象。
+
+```js
+      class Person {
+        constructor(name, age) {
+          this.name = name
+          this.age = age
+        }
+        say(){
+          console.log('hello~')
+        }
+      }
+      class Student extends Person {
+        constructor(name, age, score) {
+          super(name, age)
+          // student继承person所以通过原型链可以访问person原型对象上的方法say
+          // super是person的原型对象，有say方法
+          console.log(this.say===super.say); // true
+          this.score=score
+        }
+      }
+```
+
+### 在super上给某个属性赋值
+
+若给super对象添加、修改一个属性，则会将属性挂载到实例上。
+
+```js
+      class Person {
+        constructor(name, age) {
+          this.name = name
+          this.age = age
+        }
+      }
+      class Student extends Person {
+        constructor(name, age, score) {
+          super(name, age)
+          this.score = score
+          // 给实例添加属性
+          super.ok = 5
+    	  console.log(Object.getOwnPropertyNames(this).includes('ok'));
+        }
+      }
+```
+
+
+
+### 注意点
+
+1. 若派生类使用了自定义构造函数，则必须要调用`super`函数来初始化基类的属性
+2. 在构造函数中，`super`函数的调用必须在使用this之前。
+3. 若派生类无构造函数，JS在幕后自动生成构造函数，会自动调用`super`函数初始化基类的属性。
+4. 若通过`super.xxx`调用了某个方法，且该方法中有`this`操作，此时`this`指向派生类实例。
+
+```ts
+      class Person {
+        constructor(name, age) {
+          this.name = name
+          this.age = age
+        }
+        test(){
+          console.log(this.score);
+          return this
+        }
+      }
+      class Student extends Person {
+        constructor(name, age, score) {
+          super(name, age)
+          this.score = score
+          // student继承person所以通过原型链可以访问person原型对象上的方法say
+          // super是person的原型对象，有say方法
+          console.log(this.say === super.say) // true
+          // this调用方法、super调用方法时，方法的this都是指向当前实例的
+          console.log(this.test()===super.test()); // true
+        }
+      }
+```
+
+
+
+
+
+## TS相关
+
+### 1.type和interface的区别
+
+​	type是类型别名，可以定义一个类型的别称。
+
+​	interface用来定义接口，描述一个对象，interface可以重复定义。
 
 
 

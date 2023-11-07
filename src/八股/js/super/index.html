@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script>
+      class Person {
+        constructor(name, age) {
+          this.name = name
+          this.age = age
+        }
+        say() {
+          console.log('hello~')
+        }
+        test() {
+          console.log(this.score)
+          return this
+        }
+      }
+      class Student extends Person {
+        constructor(name, age, score) {
+          super(name, age)
+          this.score = score
+          // student继承person所以通过原型链可以访问person原型对象上的方法say
+          // super是person的原型对象，有say方法
+          console.log(this.say === super.say) // true
+          // this调用方法、super调用方法时，方法的this都是指向当前实例的
+          console.log(this.test() === super.test()) // true
+          super.test = 'ko'
+          console.log(this.test === 'ko')
+        }
+      }
+      console.log(new Student('Mark', 10, 100))
+    </script>
+  </body>
+</html>
